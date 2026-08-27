@@ -142,3 +142,102 @@ export async function verifyAccess(request, env, slug) {
   for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
   return diff === 0;
 }
+
+// ---------- 管理端文件访问令牌 ----------
+// 后台 <img> 标签无法携带 Authorization 头，改用短时效 HMAC 令牌（默认 2 小时）：
+//   1. /api/portfolios 与 /api/config?fresh=1 响应中携带 file_token
+//   2. 后台给图片 URL 追加 ?ft=xxx
+//   3. /api/file/... 校验通过则视为已授权（可访问全部页面，不受预览 N 页限制）
+export async function signFileToken(env, ttlMs = 2 * 60 * 60 * 1000) {
+  const secret = await getSecret(env);
+  if (!secret) return null;
+  const exp = Date.now() + ttlMs;
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const mac = await crypto.subtle.sign('HMAC', key, enc.encode('ft|' + exp));
+  return `${exp}.${hex(mac)}`;
+}
+
+export async function verifyFileToken(env, token) {
+  const m = String(token || '').match(/^(\d+)\.([a-f0-9]{64})$/);
+  if (!m) return false;
+  const exp = +m[1], sig = m[2];
+  if (!exp || Date.now() > exp) return false;
+  const secret = await getSecret(env);
+  if (!secret) return false;
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const mac = await crypto.subtle.sign('HMAC', key, enc.encode('ft|' + exp));
+  const expected = hex(mac);
+  let diff = 0;
+  for (let i = 0; i < 64; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
+  return diff === 0;
+}
+
+// ---------- Schema v3 自动迁移（幂等，冷启动时自检一次） ----------
+// 说明：D1 不支持 ADD COLUMN IF NOT EXISTS，这里用「执行失败即忽略」实现幂等。
+// 模块级标记保证同一 Worker 实例只尝试一次，失败会在下次冷启动重试。
+let _schemaOk = false;
+export async function ensureSchema(env) {
+  if (_schemaOk) return;
+  const alter = async (sql) => {
+    try { await env.DB.prepare(sql).run(); } catch (e) {}
+  };
+  try {
+    await alter("ALTER TABLE portfolios ADD COLUMN preview_count INTEGER NOT NULL DEFAULT 0");
+    await alter("ALTER TABLE portfolios ADD COLUMN expire_at INTEGER NOT NULL DEFAULT 0");
+    await alter("ALTER TABLE visits ADD COLUMN slug TEXT NOT NULL DEFAULT ''");
+    await alter("CREATE INDEX IF NOT EXISTS idx_visits_slug ON visits (slug, ts)");
+    _schemaOk = true;
+  } catch (e) {}
+}
+
+// ---------- 邮件通知（Resend API） ----------
+// email_config 存于 config 表：{ enabled, to, from, api_key }
+export async function getEmailConfig(env) {
+  try {
+    const row = await env.DB.prepare("SELECT value FROM config WHERE key='email_config'").first();
+    return row ? JSON.parse(row.value) : {};
+  } catch (e) { return {}; }
+}
+
+export async function sendEmail(env, { subject, html }) {
+  const cfg = await getEmailConfig(env);
+  if (!cfg.enabled || !cfg.api_key || !cfg.to) return { ok: false, error: '邮件未启用或配置不完整' };
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + cfg.api_key,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: cfg.from || 'Portfolio <onboarding@resend.dev>',
+        to: [cfg.to],
+        subject,
+        html,
+      }),
+    });
+    if (r.ok) return { ok: true };
+    let msg = 'HTTP ' + r.status;
+    try { const d = await r.json(); if (d && d.message) msg = d.message; } catch (e) {}
+    return { ok: false, error: msg };
+  } catch (e) {
+    return { ok: false, error: '网络错误：' + (e.message || e) };
+  }
+}
+
+// 通知节流：同一站点冷却期内只发一封（默认 10 分钟），避免访问高峰刷屏
+export async function acquireNotifySlot(env, cooldownMs = 10 * 60 * 1000) {
+  try {
+    const row = await env.DB.prepare("SELECT value FROM config WHERE key='notify_state'").first();
+    const state = row ? JSON.parse(row.value) : {};
+    if (state.last_ts && Date.now() - state.last_ts < cooldownMs) return false;
+    await env.DB.prepare(
+      "INSERT INTO config (key, value) VALUES ('notify_state', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+    ).bind(JSON.stringify({ last_ts: Date.now() })).run();
+    return true;
+  } catch (e) { return false; }
+}

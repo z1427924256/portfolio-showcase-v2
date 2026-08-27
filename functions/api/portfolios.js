@@ -1,6 +1,21 @@
-import { json, verifyToken, deleteFile, purgeConfigs, hashPassword } from '../_lib';
+import { json, verifyToken, deleteFile, purgeConfigs, hashPassword, ensureSchema, signFileToken } from '../_lib';
 
 const MAX_PORTFOLIOS = 20;
+
+// 校验有效期时间戳：0（永久）或当前时间之后 100 年内的毫秒值
+function cleanExpire(v) {
+  const n = parseInt(v, 10);
+  if (!n || n <= 0) return 0;
+  const max = Date.now() + 100 * 365 * 86400 * 1000;
+  return Math.min(n, max);
+}
+
+// 校验预览页数：0（不限制）或 1-500
+function cleanPreview(v) {
+  const n = parseInt(v, 10);
+  if (!n || n <= 0) return 0;
+  return Math.min(500, n);
+}
 
 // 自动迁移：首次访问时将旧 config 中的单作品集数据迁移到 portfolios 表
 async function ensureMigrated(env) {
@@ -46,6 +61,7 @@ export async function onRequestGet(context) {
   const url = new URL(request.url);
   const publishedOnly = url.searchParams.has('published');
 
+  await ensureSchema(env);
   await ensureMigrated(env);
 
   let sql;
@@ -72,6 +88,8 @@ export async function onRequestGet(context) {
       is_published: r.is_published === 1,
       password_protected: !!(r.password && r.password.length > 0),
       visit_limit: r.visit_limit || 0,
+      preview_count: r.preview_count || 0,
+      expire_at: r.expire_at || 0,
       views: r.views || 0,
       sort_order: r.sort_order,
       created_at: r.created_at,
@@ -79,7 +97,8 @@ export async function onRequestGet(context) {
     };
   });
 
-  return json({ ok: true, portfolios: list });
+  const fileToken = publishedOnly ? null : await signFileToken(env);
+  return json({ ok: true, portfolios: list, file_token: fileToken });
 }
 
 // POST /api/portfolios —— 新建作品集（需登录）
@@ -87,6 +106,7 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   const { request, env } = context;
   if (!(await verifyToken(request, env))) return json({ ok: false, error: '登录已过期，请重新登录' }, 401);
+  await ensureSchema(env);
 
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, error: '参数错误' }, 400); }
@@ -118,15 +138,17 @@ export async function onRequestPost(context) {
   }
 
   const visitLimit = Math.max(0, Math.min(1000000, parseInt(body.visit_limit, 10) || 0));
+  const previewCount = cleanPreview(body.preview_count);
+  const expireAt = cleanExpire(body.expire_at);
 
   const maxSort = await env.DB.prepare('SELECT MAX(sort_order) as m FROM portfolios').first();
   const sortOrder = (maxSort && maxSort.m != null) ? maxSort.m + 1 : 0;
 
   const now = Date.now();
   const result = await env.DB.prepare(
-    `INSERT INTO portfolios (title, slug, version, page_count, pages, pages_prev, page_order, pdf_size, pdf_name, pdf_chunks, r2_prefix, sort_order, is_published, password, visit_limit, views, created_at, updated_at)
-     VALUES (?, ?, 0, 0, NULL, NULL, NULL, 0, '', 0, '', ?, 1, ?, ?, 0, ?, ?)`
-  ).bind(title, slug, sortOrder, passwordHash, visitLimit, now, now).run();
+    `INSERT INTO portfolios (title, slug, version, page_count, pages, pages_prev, page_order, pdf_size, pdf_name, pdf_chunks, r2_prefix, sort_order, is_published, password, visit_limit, preview_count, expire_at, views, created_at, updated_at)
+     VALUES (?, ?, 0, 0, NULL, NULL, NULL, 0, '', 0, '', ?, 1, ?, ?, ?, ?, 0, ?, ?)`
+  ).bind(title, slug, sortOrder, passwordHash, visitLimit, previewCount, expireAt, now, now).run();
 
   const id = result.meta ? result.meta.last_row_id : null;
   if (!id) return json({ ok: false, error: '创建失败' }, 500);
@@ -192,6 +214,14 @@ export async function onRequestPut(context) {
   }
   if (typeof body.visit_limit === 'number') {
     updates.push('visit_limit=?'); binds.push(Math.max(0, Math.min(1000000, body.visit_limit | 0)));
+  }
+  // 预览页数（0 = 不限制）
+  if (body.preview_count !== undefined) {
+    updates.push('preview_count=?'); binds.push(cleanPreview(body.preview_count));
+  }
+  // 有效期（0 = 永久有效）
+  if (body.expire_at !== undefined) {
+    updates.push('expire_at=?'); binds.push(cleanExpire(body.expire_at));
   }
   // 密码：传 null/''/clear_password 清除
   if (body.clear_password === true || body.password === null || body.password === '') {

@@ -158,15 +158,29 @@ const esc = (s) => String(s || '').replace(/[&<>"']/g, (m) =>
   try {
     const r = await fetch('/api/config', { cache: 'no-store' });
     const d = await r.json();
-    if (d.ok && d.config && d.config.site_title) {
-      document.title = d.config.site_title;
-      $('site-title').textContent = d.config.site_title;
-      if (d.config.phone && d.config.phone_enabled) {
-        $('site-sub').textContent = '点击卡片查看完整作品';
+    if (d.ok && d.config) {
+      const cfg = d.config;
+      if (cfg.site_title) {
+        document.title = cfg.site_title;
+        $('site-title').textContent = cfg.site_title;
+        // 同步 OG 标签（SEO 主体在静态 meta，此处做增强）
+        const ogT = document.querySelector('meta[property="og:title"]');
+        if (ogT) ogT.setAttribute('content', cfg.site_title);
       }
-      // 同步 OG 标签（SEO 主体在静态 meta，此处做增强）
-      const ogT = document.querySelector('meta[property="og:title"]');
-      if (ogT) ogT.setAttribute('content', d.config.site_title);
+      // 站点描述（站点设置）
+      if (cfg.description) {
+        $('site-sub').textContent = cfg.description;
+        const ogD = document.querySelector('meta[property="og:description"]');
+        if (ogD) ogD.setAttribute('content', cfg.description);
+        const mD = document.querySelector('meta[name="description"]');
+        if (mD) mD.setAttribute('content', cfg.description);
+      }
+      // 网站图标（站点设置）
+      if (cfg.favicon_version > 0) {
+        let fav = document.querySelector("link[rel='icon']");
+        if (!fav) { fav = document.createElement('link'); fav.rel = 'icon'; document.head.appendChild(fav); }
+        fav.href = '/api/file/favicon?v=' + cfg.favicon_version;
+      }
     }
 
     // 作品集列表（已发布）

@@ -7,6 +7,8 @@
 const RESERVED = new Set([
   'admin', 'guide', 'thanks', 'login', 'api', 'assets', 'vendor',
   'favicon.ico', 'robots.txt', 'index.html', '_redirects',
+  // 静态页面的完整文件名（[slug] 路由会拦截单段路径，需显式放行）
+  'thanks.html', 'admin.html', 'guide.html', 'sitemap.xml',
 ]);
 
 function redirect(location, status = 302) {

@@ -1,4 +1,4 @@
-import { json } from '../_lib';
+import { json, ensureSchema, sendEmail, acquireNotifySlot } from '../_lib';
 
 // 省级行政区（ISO 3166-2 regionCode → 中文）
 const PROVINCES = {
@@ -79,10 +79,54 @@ function regionCn(cf) {
   return prov;
 }
 
+// GET /api/track —— 访客信息（动态水印用：IP + 服务器时间，不缓存）
+export async function onRequestGet(context) {
+  const { request } = context;
+  const ip = (request.headers.get('CF-Connecting-IP') || '').slice(0, 45);
+  return json({ ok: true, ip, ts: Date.now() }, 200, { 'Cache-Control': 'no-store' });
+}
+
+// 邮件提醒（异步执行，不阻塞上报）
+async function notifyVisit(env, { region, device, slug }) {
+  try {
+    const cfg = await env.DB.prepare("SELECT value FROM config WHERE key='email_config'").first();
+    if (!cfg) return;
+    const e = JSON.parse(cfg.value);
+    if (!e.enabled || !e.api_key || !e.to) return;
+    if (!(await acquireNotifySlot(env))) return;
+
+    let title = '作品集';
+    try {
+      const p = await env.DB.prepare('SELECT title FROM portfolios WHERE slug=?').bind(slug || '').first();
+      if (p) title = p.title;
+    } catch (err) {}
+
+    const t = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
+    const html =
+      '<div style="font-family:-apple-system,PingFang SC,Microsoft YaHei,sans-serif;max-width:520px;margin:0 auto;padding:26px;border:1px solid #eee;border-radius:12px">'
+      + '<div style="font-size:13px;color:#8a8e99;margin-bottom:14px;">PORTFOLIO · 访问提醒</div>'
+      + '<h2 style="margin:0 0 16px;font-size:17px;color:#1f2128;">您的作品集有新访客</h2>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:14px;color:#4a4d55;">'
+      + '<tr><td style="padding:7px 0;color:#8a8e99;width:76px;">作品集</td><td>' + title + '</td></tr>'
+      + '<tr><td style="padding:7px 0;color:#8a8e99;">访客位置</td><td>' + (region || '未知') + '</td></tr>'
+      + '<tr><td style="padding:7px 0;color:#8a8e99;">设备</td><td>' + (device || '未知') + '</td></tr>'
+      + '<tr><td style="padding:7px 0;color:#8a8e99;">时间</td><td>' + t + '</td></tr>'
+      + '</table>'
+      + '<p style="margin:18px 0 0;font-size:12px;color:#8a8e99;line-height:1.6;">同一时段的多次访问会合并提醒（10 分钟一封）。可在后台「站点设置 → 邮件提醒」关闭。</p>'
+      + '</div>';
+    await sendEmail(env, {
+      subject: '📖 有人正在浏览「' + title + '」',
+      html,
+    });
+  } catch (e) {}
+}
+
 // POST /api/track —— 访客记录（公开，sendBeacon 上报）
 // body: { sid, ref, path?, slug? } —— slug 为作品集标识，用于按作品集统计与访问计数
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  await ensureSchema(env);
 
   let body = {};
   try {
@@ -107,18 +151,25 @@ export async function onRequestPost(context) {
   const device = /iPad|Tablet/i.test(ua) ? '平板' : /Mobile|Android|iPhone/i.test(ua) ? '手机' : '电脑';
   const region = regionCn(cf);
 
+  let inserted = false;
   try {
     await env.DB.prepare(
       'INSERT INTO visits (ts, session, device, country, city, referrer, ua, ip, region_cn, slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
       .bind(Date.now(), sid, device, cf.country || '未知', cf.city || '', ref, ua, ip, region, slug)
       .run();
+    inserted = true;
 
     // 作品集访问计数（访问限制依据）
     if (slug) {
       await env.DB.prepare('UPDATE portfolios SET views=views+1 WHERE slug=?').bind(slug).run();
     }
   } catch {}
+
+  // 邮件提醒（异步，不阻塞上报；10 分钟内多次访问合并为一封）
+  if (inserted && context.waitUntil) {
+    context.waitUntil(notifyVisit(env, { region, device, slug }));
+  }
 
   // 偶尔清理 90 天前的旧数据
   if (Math.random() < 0.02) {

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>作品集</title>
 <style>
+  :root { --accent: #07c160; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { background: #f5f5f7; }
   body {
@@ -57,7 +58,7 @@
   #loading.hide { opacity: 0; pointer-events: none; }
   #loading .spin {
     width: 28px; height: 28px;
-    border: 3px solid #d9d9de; border-top-color: #86868b;
+    border: 3px solid #d9d9de; border-top-color: var(--accent);
     border-radius: 50%;
     animation: rot .8s linear infinite;
   }
@@ -85,8 +86,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
     border: 1px solid rgba(255, 255, 255, 0.15);
+    text-align: center;
   }
   .page-footer .text b { font-weight: 600; }
+  /* 动态水印行（访客 IP + 时间） */
+  .page-footer .text .dyn,
+  .lb-wm .dyn {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    opacity: .72;
+    line-height: 1.45;
+  }
 
   /* 右下角悬浮按钮 */
   .contact-dock {
@@ -400,12 +411,12 @@
     letter-spacing: 2px;
     -webkit-appearance: none;
   }
-  .gate-box input:focus { border-color: #0071e3; }
+  .gate-box input:focus { border-color: var(--accent); }
   .gate-box button {
     width: 100%;
     margin-top: 14px;
     border: none;
-    background: #1d1d1f;
+    background: var(--accent);
     color: #fff;
     font-size: 15px;
     font-weight: 600;
@@ -414,13 +425,49 @@
     cursor: pointer;
   }
   .gate-box button:disabled { opacity: .5; }
-  .gate-box button:active { background: #424245; }
+  .gate-box button:active { opacity: .85; }
   .gate-err {
     margin-top: 12px;
     font-size: 13px;
     color: #e02020;
     min-height: 18px;
   }
+
+  /* 预览结束锁定卡片（密码作品集，前 N 页免费预览） */
+  .lock-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 36px 24px 32px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  }
+  .lock-card .lk-ico {
+    width: 48px; height: 48px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: #f5f5f7;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lock-card .lk-ico svg { width: 22px; height: 22px; fill: #86868b; }
+  .lock-card h3 { font-size: 17px; font-weight: 600; color: #1d1d1f; margin-bottom: 6px; }
+  .lock-card p { font-size: 13px; color: #86868b; line-height: 1.6; margin-bottom: 20px; }
+  .lock-card p b { color: #4a4d55; font-weight: 600; }
+  .lock-card button {
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 11px 36px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .lock-card button:active { opacity: .85; }
+  .lock-card button svg { width: 15px; height: 15px; fill: #fff; }
+
   /* 链接失效提示 */
   .blocked-box {
     text-align: center;
@@ -462,11 +509,11 @@
   </div>
 </div>
 
-<!-- 链接失效提示（访问次数用尽） -->
+<!-- 链接失效提示（有效期结束 / 访问次数用尽） -->
 <div class="blocked-box" id="blocked" style="display:none">
-  <div class="ico">🔒</div>
-  <h2>链接已失效</h2>
-  <p>该作品集的访问次数已用完<br>请联系分享者重新获取</p>
+  <div class="ico" id="blocked-ico">🔒</div>
+  <h2 id="blocked-title">链接已失效</h2>
+  <p id="blocked-text">该作品集的访问次数已用完<br>请联系分享者重新获取</p>
 </div>
 
 <div class="pages" id="pages"></div>
@@ -550,46 +597,78 @@
   const pf = (cfg && cfg.portfolio) || null;
   if (c.title) document.title = c.title;
 
-  // ---------- 链接失效（访问次数用尽） ----------
+  // ---------- 站点设置：主题 / 网站图标 / 描述 ----------
+  const ACCENTS = {
+    green: '#07c160', blue: '#0071e3', purple: '#7c3aed',
+    orange: '#f97316', rose: '#e11d48', dark: '#1d1d1f',
+  };
+  if (ACCENTS[c.theme]) document.documentElement.style.setProperty('--accent', ACCENTS[c.theme]);
+  if (c.favicon_version > 0) {
+    let fav = document.querySelector("link[rel='icon']");
+    if (!fav) { fav = document.createElement('link'); fav.rel = 'icon'; document.head.appendChild(fav); }
+    fav.href = '/api/file/favicon?v=' + c.favicon_version;
+  }
+  if (c.description) {
+    let m = document.querySelector('meta[name="description"]');
+    if (!m) { m = document.createElement('meta'); m.name = 'description'; document.head.appendChild(m); }
+    m.content = c.description;
+  }
+
+  // ---------- 链接失效（有效期结束 / 访问次数用尽） ----------
   if (pf && pf.blocked) {
     $('loading').remove();
+    if (pf.expired) {
+      $('blocked-ico').textContent = '⏰';
+      $('blocked-title').textContent = '链接已过期';
+      $('blocked-text').innerHTML = '该作品集的有效期已结束<br>请联系分享者重新获取';
+    }
     $('blocked').style.display = 'block';
     return;
   }
 
-  // ---------- 密码门（受保护作品集） ----------
-  if (pf && pf.protected && !pf.authorized) {
-    $('loading').remove();
-    $('gate-title').textContent = c.title || '该内容已加密';
-    $('gate').classList.add('open');
-    const passInput = $('gate-pass');
-    const submit = async () => {
-      const pw = passInput.value;
-      if (!pw) { $('gate-err').textContent = '请输入密码'; return; }
-      const btn = $('gate-btn');
-      btn.disabled = true; btn.textContent = '验证中…';
-      $('gate-err').textContent = '';
-      try {
-        const r = await fetch('/api/access', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug, password: pw }),
-        });
-        const d = await r.json();
-        if (d.ok) {
-          location.reload();
-        } else {
-          $('gate-err').textContent = d.error || '密码不正确';
-          btn.disabled = false; btn.textContent = '查 看';
-        }
-      } catch (e) {
-        $('gate-err').textContent = '网络错误，请重试';
+  // ---------- 预览模式：密码作品集开放前 N 页免费浏览 ----------
+  const inPreview = !!(pf && pf.protected && !pf.authorized && pf.preview_count > 0 && cfg && cfg.manifest);
+  const previewCount = inPreview ? Math.max(1, Math.min(pf.preview_count, pf.page_count || pf.preview_count)) : 0;
+
+  // ---------- 密码门（整册加密 / 预览模式解锁共用） ----------
+  const passInput = $('gate-pass');
+  const gateSubmit = async () => {
+    const pw = passInput.value;
+    if (!pw) { $('gate-err').textContent = '请输入密码'; return; }
+    const btn = $('gate-btn');
+    btn.disabled = true; btn.textContent = '验证中…';
+    $('gate-err').textContent = '';
+    try {
+      const r = await fetch('/api/access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, password: pw }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        location.reload();
+      } else {
+        $('gate-err').textContent = d.error || '密码不正确';
         btn.disabled = false; btn.textContent = '查 看';
       }
-    };
-    $('gate-btn').addEventListener('click', submit);
-    passInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    } catch (e) {
+      $('gate-err').textContent = '网络错误，请重试';
+      btn.disabled = false; btn.textContent = '查 看';
+    }
+  };
+  const openGate = () => {
+    $('gate-title').textContent = c.title || '该内容已加密';
+    $('gate-sub').textContent = inPreview ? '输入密码解锁全部内容' : '请输入访问密码';
+    $('gate').classList.add('open');
     setTimeout(() => passInput.focus(), 100);
+  };
+  $('gate-btn').addEventListener('click', gateSubmit);
+  passInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') gateSubmit(); });
+
+  if (pf && pf.protected && !pf.authorized && !inPreview) {
+    // 整册加密（未设置预览页）：直接密码门
+    $('loading').remove();
+    openGate();
     return;
   }
 
@@ -600,21 +679,36 @@
 
   // ---------- 水印 ----------
   // 两种样式：capsule（磨砂胶囊，底部居中）/ tile（斜纹平铺全屏）
+  // {名字} 语法加粗；wm_dynamic 开启时附加访客 IP 与访问时间（防转发截图）
+  let dynText = '';
+  if (c.wm_dynamic) {
+    try {
+      const tr = await fetch('/api/track', { cache: 'no-store' });
+      const td = await tr.json();
+      if (td.ok) {
+        const p2 = (n) => String(n).padStart(2, '0');
+        const t = new Date(td.ts || Date.now());
+        dynText = (td.ip || '未知IP') + ' · ' + t.getFullYear() + '/' + p2(t.getMonth() + 1) + '/' + p2(t.getDate()) + ' ' + p2(t.getHours()) + ':' + p2(t.getMinutes());
+      }
+    } catch (e) {}
+  }
   if (c.wm_enabled && c.wm_text) {
     if (c.wm_style === 'tile') {
       // 斜纹平铺：SVG 文本平铺为背景，覆盖全屏（含全屏查看器）
-      const text = String(c.wm_text).replace(/\{name\}/g, c.wm_name || '');
+      let plain = String(c.wm_text).replace(/\{([^{}]{1,50})\}/g, '$1');
+      if (dynText) plain += '　·　' + dynText;
+      const svgText = plain.replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
       const svg =
         "<svg xmlns='http://www.w3.org/2000/svg' width='280' height='200'>" +
         "<text x='140' y='110' font-size='14' fill='rgba(255,255,255,0.14)' font-family='-apple-system,PingFang SC,Microsoft YaHei,sans-serif' text-anchor='middle' transform='rotate(-22 140 100)'>" +
-        text.replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])) +
-        '</text></svg>';
+        svgText + '</text></svg>';
       const tile = $('wm-tile');
       tile.style.backgroundImage = "url(\"data:image/svg+xml," + encodeURIComponent(svg) + "\")";
       tile.style.display = 'block';
     } else {
       // 胶囊水印（默认）
-      const html = esc(c.wm_text).replace(/\{name\}/g, '<b>' + esc(c.wm_name) + '</b>');
+      let html = esc(c.wm_text).replace(/\{([^{}]{1,50})\}/g, '<b>$1</b>');
+      if (dynText) html += '<span class="dyn">' + esc(dynText) + '</span>';
       $('wm-text').innerHTML = html;
       $('wm').style.display = 'flex';
       $('lb-wm').innerHTML = html;
@@ -766,10 +860,13 @@
 
   // ---------- 内容渲染：图片模式（快） ----------
   function renderImageMode(mf) {
-    const list =
+    let list =
       Array.isArray(c.pages) && c.pages.length
         ? c.pages.filter((n) => n >= 1 && n <= mf.count)
         : Array.from({ length: mf.count }, (_, i) => i + 1);
+    // 预览模式：只渲染前 N 页，其余锁定
+    const lockedCount = inPreview ? Math.max(0, list.length - previewCount) : 0;
+    if (inPreview) list = list.slice(0, previewCount);
     lbList = list;
     lbVer = mf.version;
     lbDims = mf.pages || [];
@@ -805,6 +902,19 @@
       el.appendChild(img);
       container.appendChild(el);
     });
+
+    // 预览结束：锁定卡片（输入密码解锁全部）
+    if (inPreview) {
+      const lock = document.createElement('div');
+      lock.className = 'lock-card';
+      lock.innerHTML =
+        '<div class="lk-ico"><svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 1 1 6 0v3H9z"/></svg></div>' +
+        '<h3>预览已结束</h3>' +
+        '<p>已展示前 <b>' + previewCount + '</b> 页，还有 <b>' + lockedCount + '</b> 页内容<br>输入访问密码即可解锁全部页面</p>' +
+        '<button type="button" id="lk-btn"><svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 1 1 6 0v3H9z"/></svg>解锁全部内容</button>';
+      container.appendChild(lock);
+      lock.querySelector('#lk-btn').addEventListener('click', openGate);
+    }
     hideLoading();
   }
 

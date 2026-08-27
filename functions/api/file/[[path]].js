@@ -1,4 +1,4 @@
-import { loadFile } from '../../_lib';
+import { loadFile, verifyAccess, verifyFileToken } from '../../_lib';
 
 const CHUNK = 20 * 1024 * 1024;
 
@@ -21,24 +21,54 @@ const SLUG_RE = /^[\w-]{1,40}$/;
 
 /** 按 slug 查作品集（拿 r2_prefix 与密码状态），default 表示旧版单作品集 */
 async function findPortfolio(env, slug) {
+  const cols = 'slug, r2_prefix, password, preview_count';
   if (slug === 'default') {
-    const row = await env.DB.prepare("SELECT slug, r2_prefix, password FROM portfolios WHERE slug='default'").first();
-    return row || { slug: 'default', r2_prefix: '', password: '' };
+    const row = await env.DB.prepare(`SELECT ${cols} FROM portfolios WHERE slug='default'`).first();
+    return row || { slug: 'default', r2_prefix: '', password: '', preview_count: 0 };
   }
   if (!SLUG_RE.test(slug)) return null;
-  const row = await env.DB.prepare('SELECT slug, r2_prefix, password FROM portfolios WHERE slug=?').bind(slug).first();
+  const row = await env.DB.prepare(`SELECT ${cols} FROM portfolios WHERE slug=?`).bind(slug).first();
   return row || null;
 }
 
 // GET /api/file/{slug}/page/v{version}/{index}.webp|.jpg —— 作品集页面图片
 // GET /api/file/page/v{version}/{index}.webp|.jpg —— 旧版兼容（default 作品集）
 // GET /api/file/qrcode —— 二维码（全局）
+// GET /api/file/favicon —— 网站图标（全局）
 // GET /api/file/pdf/v{v}/{size}.pdf —— 旧版 PDF 兜底（default 作品集）
 export async function onRequestGet(context) {
   const { request, env, params } = context;
   const parts = params.path || [];
   const path = parts.join('/');
   const cache = caches.default;
+
+  // 网站图标（全局资源，与作品集无关）
+  if (path === 'favicon' || path === 'favicon.ico' || path === 'favicon.png') {
+    let cached = null;
+    try {
+      cached = await cache.match(request);
+    } catch (e) {}
+    if (cached) return cached;
+
+    const obj = await loadFile(env, 'favicon_img');
+    if (!obj) return notFound();
+
+    const vRow = await env.DB.prepare('SELECT value FROM config WHERE key=?').bind('favicon_version').first();
+    const version = vRow ? +vRow.value : 1;
+
+    const res = new Response(obj.buf, {
+      headers: {
+        'Content-Type': imgContentType(obj.buf),
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        ETag: `"fav-${version}"`,
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
+    try {
+      await cache.put(request, res.clone());
+    } catch (e) {}
+    return res;
+  }
 
   // 二维码（全局资源，与作品集无关）
   if (path === 'qrcode' || path === 'qrcode.png') {
@@ -86,22 +116,38 @@ export async function onRequestGet(context) {
     const index = +pm[2];
     if (version < 1 || version > 1000 || index < 1 || index > 500) return notFound();
 
-    // 无密码作品集：先查边缘缓存（命中则跳过 D1 查询）
+    const url = new URL(request.url);
+    const ft = url.searchParams.get('ft') || '';
+
+    // 无密码作品集且不带管理令牌：先查边缘缓存（命中则跳过 D1 查询）
     let cached = null;
-    try {
-      cached = await cache.match(request);
-    } catch (e) {}
-    if (cached) return cached;
+    if (!ft) {
+      try {
+        cached = await cache.match(request);
+      } catch (e) {}
+      if (cached) return cached;
+    }
 
     const pf = await findPortfolio(env, slug);
     if (!pf) return notFound();
+
+    // 访问控制：管理端令牌 ft 全量放行；密码作品集凭 Cookie 授权，未授权仅可看前 preview_count 页
+    const isAdmin = ft ? await verifyFileToken(env, ft) : false;
+    if (!isAdmin) {
+      const isProtected = !!(pf.password && pf.password.length > 0);
+      const authorized = isProtected ? await verifyAccess(request, env, pf.slug) : true;
+      const previewCount = pf.preview_count || 0;
+      if (!authorized) {
+        if (previewCount < 1 || index > previewCount) return notFound();
+      }
+    }
 
     const obj = await loadFile(env, `${pf.r2_prefix || ''}page_v${version}_${index}`);
     if (!obj) return notFound();
 
     const protectedPf = !!(pf.password && pf.password.length > 0);
-    // 受密码保护的作品集：响应不进入共享边缘缓存（按 URL 缓存会绕过密码）
-    const cacheCtl = protectedPf
+    // 受密码保护的作品集 / 管理端令牌请求：响应不进入共享边缘缓存（按 URL 缓存会绕过密码）
+    const cacheCtl = protectedPf || ft
       ? 'private, max-age=600'
       : 'public, max-age=31536000, immutable';
 
@@ -113,7 +159,7 @@ export async function onRequestGet(context) {
         'X-Content-Type-Options': 'nosniff',
       },
     });
-    if (!protectedPf) {
+    if (!protectedPf && !ft) {
       try {
         await cache.put(request, res.clone());
       } catch (e) {}

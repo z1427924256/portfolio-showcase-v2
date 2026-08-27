@@ -8,8 +8,24 @@ async function getPortfolio(env, id) {
   return row || null;
 }
 
-// POST /api/upload —— 上传页面图片 / 页面清单 / 二维码（需登录）
-// 多作品集：除 qrcode 外均需携带 portfolio_id
+// 站点级图片（favicon / qrcode）公共处理：存 R2 + 版本号自增
+async function saveSiteImage(env, file, r2Key, versionKey, maxMB) {
+  if (!(file instanceof File)) return { error: '缺少文件', status: 400 };
+  if (file.size > maxMB * 1024 * 1024) return { error: `图片不能超过 ${maxMB}MB`, status: 400 };
+  if (!/^image\//.test(file.type)) return { error: '请上传图片文件', status: 400 };
+  await saveFile(env, r2Key, await file.arrayBuffer(), file.type);
+  const vRow = await env.DB.prepare('SELECT value FROM config WHERE key=?').bind(versionKey).first();
+  const version = (vRow ? +vRow.value : 0) + 1;
+  await env.DB.prepare(
+    'INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value'
+  )
+    .bind(versionKey, String(version))
+    .run();
+  return { version };
+}
+
+// POST /api/upload —— 上传页面图片 / 页面清单 / 二维码 / 网站图标（需登录）
+// 多作品集：除 qrcode/favicon 外均需携带 portfolio_id
 export async function onRequestPost(context) {
   const { request, env } = context;
   if (!(await verifyToken(request, env))) return json({ ok: false, error: '登录已过期，请重新登录' }, 401);
@@ -26,18 +42,17 @@ export async function onRequestPost(context) {
 
   // 二维码（全局，与作品集无关）
   if (type === 'qrcode') {
-    if (!(file instanceof File)) return json({ ok: false, error: '缺少文件' }, 400);
-    if (file.size > 4 * 1024 * 1024) return json({ ok: false, error: '图片不能超过 4MB' }, 400);
-    if (!/^image\//.test(file.type)) return json({ ok: false, error: '请上传图片文件' }, 400);
-    const stores = await saveFile(env, 'qrcode_img', await file.arrayBuffer(), file.type);
-    const vRow = await env.DB.prepare('SELECT value FROM config WHERE key=?').bind('qr_version').first();
-    const version = (vRow ? +vRow.value : 0) + 1;
-    await env.DB.prepare(
-      'INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value'
-    )
-      .bind('qr_version', String(version))
-      .run();
-    return json({ ok: true, version });
+    const r = await saveSiteImage(env, file, 'qrcode_img', 'qr_version', 4);
+    if (r.error) return json({ ok: false, error: r.error }, r.status);
+    return json({ ok: true, version: r.version });
+  }
+
+  // 网站图标 favicon（全局，浏览器标签页图标）
+  if (type === 'favicon') {
+    const r = await saveSiteImage(env, file, 'favicon_img', 'favicon_version', 1);
+    if (r.error) return json({ ok: false, error: r.error }, r.status);
+    await purgeConfigs(env, new URL(request.url).origin);
+    return json({ ok: true, version: r.version });
   }
 
   // ---------- 以下类型均需要 portfolio_id ----------

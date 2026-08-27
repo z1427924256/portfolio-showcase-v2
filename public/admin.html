@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>作品集管理后台</title>
 <style>
-  /* ============ 设计系统（参考 invoice-app 设计语言） ============ */
+  /* ============ 设计系统 ============ */
   :root {
     --primary: #07C160;
     --primary-soft: #E5F8EE;
@@ -41,7 +41,7 @@
     -webkit-font-smoothing: antialiased;
   }
   button { font-family: inherit; cursor: pointer; }
-  input, select { font-family: inherit; }
+  input, select, textarea { font-family: inherit; }
   ::selection { background: rgba(7,193,96,.22); }
 
   /* ============ 登录页 ============ */
@@ -134,7 +134,7 @@
   }
   .tabs::-webkit-scrollbar { display: none; }
   .tabs button {
-    border: none; background: none; padding: 11px 14px; font-size: 13.5px; font-weight: 600;
+    border: none; background: none; padding: 11px 16px; font-size: 13.5px; font-weight: 600;
     color: var(--muted); white-space: nowrap;
     border-bottom: 2px solid transparent; margin-bottom: -1px;
     display: inline-flex; align-items: center; gap: 6px;
@@ -158,28 +158,55 @@
     margin-bottom: 14px;
   }
   .card h2 {
-    font-size: 15px; margin-bottom: 18px;
+    font-size: 15px; margin-bottom: 6px;
     display: flex; align-items: center; gap: 8px;
     padding-bottom: 14px; border-bottom: 1px solid var(--line-2);
   }
-  .card h2 svg { width: 17px; height: 17px; color: var(--primary); }
+  .card h2 svg { width: 17px; height: 17px; color: var(--primary); flex-shrink: 0; }
   .card h2 .tag { font-size: 12px; color: var(--muted); font-weight: normal; margin-left: auto; }
+  .card-ops {
+    display: flex; align-items: center; gap: 10px;
+    padding-top: 16px; margin-top: 6px;
+    border-top: 1px solid var(--line-2);
+    flex-wrap: wrap;
+  }
 
-  /* ============ 表单 ============ */
-  .form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; flex-wrap: wrap; }
-  .form-row label { width: 110px; font-size: 13.5px; color: var(--ink-2); flex-shrink: 0; font-weight: 500; }
-  .form-row input[type=text], .form-row input[type=password] {
-    flex: 1; min-width: 200px; padding: 10px 13px;
-    border: 1px solid var(--line); border-radius: 9px; font-size: 14px; outline: none;
+  /* ============ 表单行（左右布局：标签在左，控件在右） ============ */
+  .frows { margin-top: 4px; }
+  .frow {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 20px; padding: 13px 0;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .frows > .frow:last-child { border-bottom: none; }
+  .frow .frow-l { min-width: 0; flex-shrink: 0; }
+  .frow .frow-l label {
+    display: block; font-size: 13.5px; color: var(--ink-2);
+    font-weight: 500; line-height: 1.4;
+  }
+  .frow .frow-l .frow-desc {
+    font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.5;
+  }
+  .frow .ctrl {
+    display: flex; align-items: center; gap: 10px; justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .frow .ctrl .inline-tip { font-size: 12px; color: var(--muted); }
+  .frow .ctrl input[type=text], .frow .ctrl input[type=password],
+  .frow .ctrl input[type=number], .frow .ctrl input[type=date] {
+    width: 300px; max-width: 100%;
+    padding: 9px 13px; border: 1px solid var(--line);
+    border-radius: 9px; font-size: 14px; outline: none;
     background: var(--line-2); transition: border-color .16s, background .16s;
   }
-  .form-row input:focus, .pw-input:focus { border-color: var(--primary); background: #fff; }
-  .pw-input {
-    flex: 1; min-width: 200px; padding: 10px 13px;
-    border: 1px solid var(--line); border-radius: 9px; font-size: 14px; outline: none;
+  .frow .ctrl input:focus { border-color: var(--primary); background: #fff; }
+  .frow .ctrl textarea {
+    width: 340px; max-width: 100%; min-height: 66px; resize: vertical;
+    padding: 9px 13px; border: 1px solid var(--line);
+    border-radius: 9px; font-size: 14px; outline: none; line-height: 1.6;
     background: var(--line-2); transition: border-color .16s, background .16s;
   }
-  .form-row .tip { font-size: 12px; color: var(--muted); width: 100%; margin-left: 122px; margin-top: -8px; }
+  .frow .ctrl textarea:focus { border-color: var(--primary); background: #fff; }
 
   .switch { position: relative; width: 44px; height: 25px; flex-shrink: 0; }
   .switch input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
@@ -192,6 +219,13 @@
   .switch input:checked + span { background: var(--primary); }
   .switch input:checked + span::after { transform: translateX(19px); }
 
+  .seg { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: #fff; }
+  .seg button {
+    padding: 8px 18px; border: none; background: #fff; font-size: 13px;
+    color: var(--muted); font-weight: 500; transition: background .16s, color .16s;
+  }
+  .seg button.on { background: var(--primary); color: #fff; font-weight: 600; }
+
   /* ============ 按钮 ============ */
   .btn-save {
     padding: 10px 26px; border: none; border-radius: 9px;
@@ -203,13 +237,21 @@
   .btn-save:hover { box-shadow: 0 6px 18px rgba(7,193,96,.35); }
   .btn-save:active { transform: scale(.97); }
   .btn-save:disabled { background: #C6CBD4; cursor: not-allowed; box-shadow: none; }
+  .btn-ghost {
+    padding: 9px 18px; background: #fff; border: 1px solid var(--line);
+    border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--ink-2);
+    transition: border-color .16s, color .16s;
+  }
+  .btn-ghost:hover { border-color: var(--primary); color: var(--primary-deep); }
+  .btn-ghost:disabled { opacity: .5; cursor: not-allowed; }
   .btn-danger {
     padding: 10px 22px; background: #fff; color: var(--danger);
     border: 1px solid rgba(220,38,38,.3); border-radius: 9px; font-size: 14px; font-weight: 500;
   }
   .btn-danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
   .btn-danger:disabled { opacity: .5; cursor: not-allowed; }
-  .ok-msg { color: var(--primary-deep); font-size: 13px; margin-left: 10px; }
+  .ok-msg { color: var(--primary-deep); font-size: 13px; }
+  .bad-msg { color: var(--danger); font-size: 13px; }
 
   /* ============ 统计 ============ */
   .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
@@ -228,14 +270,17 @@
   .stat-card .ico.p { background: #F1EAFE; color: #7C3AED; }
   .stat-card .v { font-size: 23px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
   .stat-card .k { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
-  .chart { display: flex; align-items: flex-end; gap: 5px; height: 140px; padding-top: 10px; }
+  .chart { display: flex; align-items: flex-end; gap: 5px; height: 150px; padding-top: 10px; }
   .chart .bar-w { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; justify-content: flex-end; }
   .chart .bar {
     width: 100%; max-width: 30px; min-height: 2px;
     background: linear-gradient(180deg, #2BD474 0%, var(--primary) 100%);
     border-radius: 4px 4px 0 0;
+    transform-origin: bottom;
+    animation: barGrow .5s ease;
   }
-  .chart .lbl { font-size: 10px; color: var(--muted); }
+  @keyframes barGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  .chart .lbl { font-size: 10px; color: var(--muted); white-space: nowrap; }
   .rank-list { display: flex; flex-direction: column; gap: 10px; }
   .rank-item { display: flex; align-items: center; gap: 10px; font-size: 13px; }
   .rank-item .name { width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
@@ -258,8 +303,104 @@
   .visit-list .v-pf { font-size: 11px; color: var(--primary-deep); background: var(--primary-soft); padding: 1px 7px; border-radius: 5px; flex-shrink: 0; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .visit-list .v-time { color: var(--muted); font-size: 13px; flex-shrink: 0; margin-left: 12px; font-variant-numeric: tabular-nums; }
 
+  /* ============ 作品集列表（紧凑行式布局） ============ */
+  .pf-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+  .pf-head h2 {
+    font-size: 15px; display: flex; align-items: center; gap: 8px;
+    padding-bottom: 0; border-bottom: none; margin-bottom: 0;
+  }
+  .pf-head h2 svg { width: 17px; height: 17px; color: var(--primary); }
+  .pf-head h2 .cnt { font-size: 12px; color: var(--muted); font-weight: normal; }
+  .pf-rows { display: flex; flex-direction: column; gap: 10px; }
+  .pf-row {
+    display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    cursor: pointer; box-shadow: var(--shadow-sm);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .pf-row:hover { border-color: var(--primary-border); box-shadow: var(--shadow-md); }
+  .pf-thumb {
+    width: 72px; height: 54px; border-radius: 8px; overflow: hidden;
+    background: var(--line-2); flex-shrink: 0; position: relative;
+  }
+  .pf-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pf-thumb .empty {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: 10px; color: var(--muted);
+  }
+  .pf-row-main { flex: 1; min-width: 0; }
+  .pf-row-title {
+    font-size: 14.5px; font-weight: 600; line-height: 1.3;
+    display: flex; align-items: center; gap: 8px; min-width: 0;
+  }
+  .pf-row-title .t {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  }
+  .pf-row-meta {
+    font-size: 12px; color: var(--muted); margin-top: 3px;
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .pf-row-meta .u {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--line-2); padding: 1px 7px; border-radius: 5px;
+  }
+  .pf-row-ops { display: flex; gap: 7px; flex-shrink: 0; }
+  .btn-mini {
+    padding: 7px 13px; border-radius: 8px; font-size: 12.5px;
+    border: 1px solid var(--line); background: #fff; color: var(--ink-2); font-weight: 500;
+    transition: border-color .16s, color .16s;
+  }
+  .btn-mini:hover { border-color: var(--primary); color: var(--primary-deep); }
+  .btn-mini:disabled { opacity: .35; cursor: not-allowed; }
+  .badge {
+    font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .badge.lock { background: #FEF3C7; color: #B45309; }
+  .badge.off { background: var(--line-2); color: var(--muted); }
+  .badge.limit { background: rgba(220,38,38,.08); color: var(--danger); }
+  .badge.ok { background: var(--primary-soft); color: var(--primary-deep); }
+
+  /* ============ 作品集详情 ============ */
+  .pf-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: none; background: none; color: var(--ink-2);
+    font-size: 13.5px; font-weight: 500; padding: 0; margin-bottom: 14px;
+    cursor: pointer;
+  }
+  .pf-back:hover { color: var(--primary-deep); }
+  .pf-back svg { width: 15px; height: 15px; }
+  .pf-dhead {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 18px; margin-bottom: 14px; box-shadow: var(--shadow-sm);
+  }
+  .pf-dthumb {
+    width: 108px; height: 80px; border-radius: 10px; overflow: hidden;
+    background: var(--line-2); flex-shrink: 0; position: relative;
+  }
+  .pf-dthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pf-dthumb .empty {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: 11px; color: var(--muted);
+    background: repeating-linear-gradient(45deg, var(--line-2) 0 10px, #EDF0F5 10px 20px);
+  }
+  .pf-dinfo { flex: 1; min-width: 220px; }
+  .pf-dtitle { font-size: 18px; font-weight: 700; line-height: 1.3; word-break: break-all; }
+  .pf-dmeta {
+    font-size: 12.5px; color: var(--muted); margin-top: 5px;
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .pf-dmeta .u {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--line-2); padding: 1px 7px; border-radius: 5px;
+  }
+  .pf-dops { display: flex; gap: 7px; flex-wrap: wrap; }
+
   /* ============ 页面管理 ============ */
-  .pg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  .pg-toolbar { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin: 14px 0 16px; }
+  .pg-toolbar-sp { flex: 1; }
+  .pg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 10px; }
   .pg-item {
     border: 2px solid var(--line); border-radius: var(--radius-sm); overflow: hidden;
     position: relative; background: var(--card); transition: border-color .15s;
@@ -280,29 +421,28 @@
   .pg-item .name { font-size: 11px; color: var(--muted); text-align: center; padding-bottom: 4px; }
 
   /* ============ 文件管理 ============ */
-  .file-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .file-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 14px 0 10px; }
   .file-row input[type=file] { display: none; }
-  .btn-ghost {
-    padding: 9px 18px; background: #fff; border: 1px solid var(--line);
-    border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--ink-2);
-    transition: border-color .16s, color .16s;
-  }
-  .btn-ghost:hover { border-color: var(--primary); color: var(--primary-deep); }
   .file-info { font-size: 13px; color: var(--ink-2); }
   .progress { width: 100%; height: 8px; background: var(--line-2); border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; }
   .progress .fill { height: 100%; background: linear-gradient(90deg, var(--primary) 0%, #2BD474 100%); width: 0; transition: width .2s; }
-  .qr-preview { max-width: 160px; border-radius: 9px; border: 1px solid var(--line); display: block; margin-top: 10px; }
+  .upload-note {
+    margin-top: 14px; display: flex; align-items: flex-start; gap: 8px;
+    font-size: 12.5px; color: var(--muted); line-height: 1.7;
+    background: var(--line-2); border-radius: 9px; padding: 10px 13px;
+  }
+  .upload-note svg { flex-shrink: 0; margin-top: 2px; color: var(--primary-deep); }
   .loading-inline { color: var(--muted); font-size: 13px; padding: 24px 0; text-align: center; }
 
   /* ============ 水印实时预览 ============ */
-  .wm-preview-box { margin-top: 4px; background: var(--line-2); border-radius: 12px; padding: 13px 14px 12px; }
+  .wm-preview-box { margin-top: 14px; background: var(--line-2); border-radius: 12px; padding: 13px 14px 12px; }
   .wm-preview-label {
     font-size: 11.5px; font-weight: 600; color: var(--muted);
     letter-spacing: .04em; margin-bottom: 10px;
     display: flex; align-items: center; gap: 6px;
   }
   .wm-preview-label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
-  .wm-preview { position: relative; height: 200px; border-radius: 10px; overflow: hidden; background: #fff; }
+  .wm-preview { position: relative; height: 190px; border-radius: 10px; overflow: hidden; background: #fff; }
   .wm-preview.disabled { filter: grayscale(1); opacity: .5; }
   .wm-preview-img {
     position: absolute; inset: 0;
@@ -329,14 +469,47 @@
   .wm-tile-bg { position: absolute; inset: 0; background-repeat: repeat; background-size: 200px 130px; }
   .wm-preview-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
 
+  /* ============ 主题选择 ============ */
+  .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; margin-top: 14px; }
+  .theme-sw {
+    display: flex; align-items: center; gap: 9px; padding: 11px 13px;
+    border: 2px solid var(--line); border-radius: var(--radius-sm);
+    background: #fff; font-size: 13px; color: var(--ink-2); font-weight: 500;
+    transition: border-color .15s, background .15s;
+  }
+  .theme-sw:hover { border-color: var(--primary-border); }
+  .theme-sw.on { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-deep); }
+  .theme-sw .dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
+
+  /* ============ 网站图标（浏览器标签页预览） ============ */
+  .fav-layout { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+  .fav-tab-wrap { flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+  .fav-tab-bar {
+    display: flex; align-items: flex-end; gap: 6px;
+    padding: 8px 10px 0;
+    background: linear-gradient(180deg, #E4E8EF, #D8DDE7);
+    border-radius: 12px 12px 0 0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .fav-tab {
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border-radius: 9px 9px 0 0;
+    padding: 8px 12px; width: 220px;
+  }
+  .fav-tab img { width: 18px; height: 18px; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
+  .fav-tab .t { font-size: 12.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .fav-tab .x { color: #AEB4C0; font-size: 14px; line-height: 1; }
+  .fav-tab-wrap .cap { font-size: 12px; color: var(--muted); text-align: center; }
+  .fav-right { flex: 1; min-width: 230px; }
+
   /* ============ 二维码卡片布局 ============ */
-  .qr-layout { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
+  .qr-layout { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }
   .qr-left {
-    position: relative; width: 160px; height: 160px; flex-shrink: 0;
+    position: relative; width: 150px; height: 150px; flex-shrink: 0;
     border: 1px dashed var(--line); border-radius: 12px;
     display: grid; place-items: center; background: var(--line-2);
   }
-  .qr-left .qr-preview { max-width: 148px; max-height: 148px; margin-top: 0; border: none; border-radius: 8px; }
+  .qr-left .qr-preview { max-width: 138px; max-height: 138px; margin-top: 0; border: none; border-radius: 8px; display: none; }
   .qr-empty {
     position: absolute; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 4px;
@@ -345,114 +518,12 @@
   }
   .qr-empty svg { width: 30px; height: 30px; opacity: .45; }
   .qr-right { flex: 1; min-width: 230px; }
-  .qr-right .file-row { margin-bottom: 14px; }
+  .qr-right .file-row { margin: 0 0 14px; }
 
   /* ============ 危险操作卡片 ============ */
   .card.danger { border-color: rgba(220,38,38,.25); background: linear-gradient(135deg, #FFF7F7 0%, #fff 55%); }
   .card.danger h2.danger-h { color: var(--danger); }
   .card.danger h2.danger-h svg { color: var(--danger); }
-
-  /* ============ 上传提示 ============ */
-  .upload-note {
-    margin-top: 14px; display: flex; align-items: flex-start; gap: 8px;
-    font-size: 12.5px; color: var(--muted); line-height: 1.7;
-    background: var(--line-2); border-radius: 9px; padding: 10px 13px;
-  }
-  .upload-note svg { flex-shrink: 0; margin-top: 2px; color: var(--primary-deep); }
-
-  /* ============ 作品集管理（卡片网格） ============ */
-  .pf-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-  .pf-head h2 {
-    font-size: 15px; display: flex; align-items: center; gap: 8px;
-    padding-bottom: 0; border-bottom: none; margin-bottom: 0;
-  }
-  .pf-head h2 svg { width: 17px; height: 17px; color: var(--primary); }
-  .pf-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(292px, 1fr)); gap: 14px; }
-  .pf-item {
-    display: flex; flex-direction: column; overflow: hidden;
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: var(--radius); box-shadow: var(--shadow-sm);
-    transition: border-color .15s, box-shadow .15s, transform .15s;
-  }
-  .pf-item:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-  .pf-item.cur { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(7,193,96,.10), var(--shadow-sm); }
-  .pf-thumb {
-    position: relative; aspect-ratio: 4 / 3; background: var(--line-2);
-    overflow: hidden; border-bottom: 1px solid var(--line-2);
-  }
-  .pf-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .pf-thumb-empty {
-    position: absolute; inset: 0; display: grid; place-items: center;
-    color: var(--muted); font-size: 12.5px;
-    background: repeating-linear-gradient(45deg, var(--line-2) 0 10px, #EDF0F5 10px 20px);
-  }
-  .pf-cur-mark {
-    position: absolute; top: 9px; left: 9px;
-    background: var(--primary); color: #fff;
-    font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 999px;
-    box-shadow: 0 2px 6px rgba(7,193,96,.4);
-  }
-  .pf-body { padding: 13px 15px 15px; display: flex; flex-direction: column; gap: 9px; flex: 1; }
-  .pf-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-  .pf-title {
-    font-size: 15px; font-weight: 600; line-height: 1.35;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
-  }
-  .pf-badges { display: flex; gap: 5px; flex-shrink: 0; align-items: center; }
-  .badge {
-    font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
-    flex-shrink: 0; white-space: nowrap;
-  }
-  .badge.lock { background: #FEF3C7; color: #B45309; }
-  .badge.off { background: var(--line-2); color: var(--muted); }
-  .badge.limit { background: rgba(220,38,38,.08); color: var(--danger); }
-  .badge.cur { background: var(--primary-soft); color: var(--primary-deep); }
-  .pf-meta { font-size: 12px; color: var(--muted); display: flex; gap: 9px; flex-wrap: wrap; align-items: center; }
-  .pf-meta .u {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    background: var(--line-2); padding: 1px 7px; border-radius: 5px;
-  }
-  .pf-limit-track { height: 6px; background: var(--line-2); border-radius: 3px; overflow: hidden; }
-  .pf-limit-fill {
-    height: 100%; border-radius: 3px;
-    background: linear-gradient(90deg, var(--primary) 0%, #2BD474 100%);
-    transition: width .3s;
-  }
-  .pf-limit-fill.full { background: linear-gradient(90deg, #F87171 0%, var(--danger) 100%); }
-  .pf-ops { display: flex; gap: 7px; margin-top: auto; flex-wrap: wrap; }
-  .pf-ops .btn-mini {
-    padding: 7px 13px; border-radius: 8px; font-size: 12.5px;
-    border: 1px solid var(--line); background: #fff; color: var(--ink-2); font-weight: 500;
-    transition: border-color .16s, color .16s;
-  }
-  .pf-ops .btn-mini:hover { border-color: var(--primary); color: var(--primary-deep); }
-  .pf-ops .btn-mini:disabled { opacity: .35; cursor: not-allowed; }
-  .pf-ops .btn-mini.icon { padding: 7px 8px; display: inline-flex; align-items: center; }
-  .pf-ops .btn-mini.icon.del:hover { border-color: var(--danger); color: var(--danger); background: rgba(220,38,38,.05); }
-
-  /* ============ 作品集选择器 ============ */
-  .pf-selector {
-    display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: var(--radius); padding: 13px 16px; box-shadow: var(--shadow-sm);
-  }
-  .pf-selector label { font-size: 13px; color: var(--ink-2); font-weight: 500; flex-shrink: 0; }
-  .pf-selector select {
-    flex: 1; min-width: 200px; padding: 9px 13px; border: 1px solid var(--line);
-    border-radius: 9px; font-size: 14px; outline: none; background: #fff;
-    transition: border-color .16s;
-  }
-  .pf-selector select:focus { border-color: var(--primary); }
-  .pf-selector-stats { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
-  .pf-selector-stats span {
-    font-size: 12px; color: var(--ink-2); background: var(--line-2);
-    padding: 3px 10px; border-radius: 999px; white-space: nowrap;
-  }
-  .pf-selector-stats span b { color: var(--primary-deep); font-variant-numeric: tabular-nums; }
-
-  /* ============ 页面管理工具条 ============ */
-  .pg-toolbar { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 16px; }
-  .pg-toolbar-sp { flex: 1; }
 
   /* ============ 模态框 ============ */
   .modal-mask {
@@ -473,44 +544,27 @@
     padding-bottom: 14px; border-bottom: 1px solid var(--line-2);
   }
   .modal h3 svg { width: 18px; height: 18px; color: var(--primary); }
-  .modal .form-row { margin-bottom: 13px; }
-  .modal .form-row label { width: 86px; }
-  .modal .modal-ops { display: flex; gap: 10px; margin-top: 22px; justify-content: flex-end; }
-  .modal .link-box {
-    display: flex; gap: 8px; align-items: center;
-    background: var(--line-2); border-radius: 9px; padding: 10px 12px; font-size: 13px;
-    word-break: break-all; margin-bottom: 4px;
-  }
-  .modal .link-box code { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
-  .modal .link-box button {
-    border: 1px solid var(--line); background: #fff; border-radius: 7px;
-    font-size: 12px; padding: 5px 10px; flex-shrink: 0;
-  }
-  .modal .link-box button:hover { border-color: var(--primary); color: var(--primary-deep); }
-
-  .seg { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: #fff; }
-  .seg button {
-    flex: 1; padding: 9px 0; border: none; background: #fff; font-size: 13px;
-    color: var(--muted); font-weight: 500; transition: background .16s, color .16s;
-  }
-  .seg button.on { background: var(--primary); color: #fff; font-weight: 600; }
+  .modal .frows .frow:last-child { border-bottom: none; }
+  .modal .modal-ops { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
 
   /* ============ 响应式 ============ */
   @media (max-width: 700px) {
     .grid-2 { grid-template-columns: 1fr; }
-    .form-row .tip { margin-left: 0; }
-    .form-row label { width: 100%; }
     .card { padding: 18px 16px; }
     .topbar { padding: 10px 14px; }
     .brand-name small { display: none; }
     .topbar a.view { padding: 7px 10px; }
     .main { padding: 0 14px; }
     .tabs { padding: 0 14px; }
-    .pf-list { grid-template-columns: 1fr; }
-    .pf-selector-stats { width: 100%; }
-    .qr-layout { gap: 14px; }
     .chart { gap: 3px; }
     .rank-item .name { width: 92px; }
+    .frow { flex-direction: column; align-items: stretch; gap: 10px; }
+    .frow .ctrl { justify-content: flex-start; }
+    .frow .ctrl input[type=text], .frow .ctrl input[type=password],
+    .frow .ctrl input[type=number], .frow .ctrl input[type=date] { width: 100%; }
+    .frow .ctrl textarea { width: 100%; }
+    .pf-row-ops { display: none; }
+    .pf-dops { width: 100%; }
   }
   </style>
 </head>
@@ -555,41 +609,22 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       作品集
     </button>
-    <button data-tab="settings">
+    <button data-tab="site">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      内容设置
-    </button>
-    <button data-tab="pages">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-      页面管理
-    </button>
-    <button data-tab="files">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      文件管理
-    </button>
-    <button data-tab="passwd">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      修改密码
+      站点设置
     </button>
   </div>
 
   <div class="main">
-    <!-- 作品集管理 -->
-    <div class="panel" id="panel-portfolios">
-      <div class="pf-head">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> 我的作品集 <span class="tag" style="font-size:12px;color:#8A8E99;font-weight:normal" id="pf-count"></span></h2>
-        <button class="btn-save" id="pf-new">＋ 新建作品集</button>
-      </div>
-      <div class="pf-list" id="pf-list">
-        <div class="loading-inline">正在加载…</div>
-      </div>
-    </div>
-
-    <!-- 概览 -->
+    <!-- ======================== 概览 ======================== -->
     <div class="panel on" id="panel-overview">
       <div class="stat-cards" id="stat-cards"></div>
       <div class="card">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> 近 14 天访问量</h2>
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          近 14 天访问量
+          <span class="tag"><button class="btn-ghost" id="stats-refresh" style="padding:6px 14px;font-size:12.5px">刷新数据</button></span>
+        </h2>
         <div class="chart" id="chart"></div>
       </div>
       <div class="grid-2">
@@ -606,88 +641,359 @@
       </div>
     </div>
 
-    <!-- 内容设置 -->
-    <div class="panel" id="panel-settings">
-      <div class="card">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> 站点信息 <span class="tag">全局生效</span></h2>
-        <div class="form-row">
-          <label>网页标题</label>
-          <input type="text" id="set-title" placeholder="浏览器标签页显示的标题">
+    <!-- ======================== 作品集 ======================== -->
+    <div class="panel" id="panel-portfolios">
+      <!-- 列表视图 -->
+      <div id="pf-list-view">
+        <div class="pf-head">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            我的作品集 <span class="cnt" id="pf-count"></span>
+          </h2>
+          <button class="btn-save" id="pf-new">＋ 新建作品集</button>
         </div>
-        <div style="margin-top:16px">
-          <button class="btn-save" id="save-settings">保存设置</button>
-          <span class="ok-msg" id="settings-msg"></span>
+        <div class="pf-rows" id="pf-rows">
+          <div class="loading-inline">正在加载…</div>
         </div>
       </div>
 
-      <div class="card">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 9v6m-3-6h6v6H9z"/></svg> 水印设置 <span class="tag">保护原创内容</span></h2>
-        <div class="form-row">
-          <label>显示水印</label>
-          <div class="switch"><input type="checkbox" id="set-wm-on"><span></span></div>
-        </div>
-        <div class="form-row">
-          <label>水印样式</label>
-          <div class="seg" style="max-width:280px">
-            <button type="button" id="wm-style-capsule" class="on">胶囊水印</button>
-            <button type="button" id="wm-style-tile">斜纹平铺</button>
+      <!-- 详情视图（内容设置 / 页面管理 / 文件管理 已合并到此处） -->
+      <div id="pf-detail" style="display:none">
+        <button class="pf-back" id="pf-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          返回作品集列表
+        </button>
+
+        <div class="pf-dhead">
+          <div class="pf-dthumb" id="pf-dthumb"></div>
+          <div class="pf-dinfo">
+            <div class="pf-dtitle" id="pf-dtitle"></div>
+            <div class="pf-dmeta" id="pf-dmeta"></div>
+          </div>
+          <div class="pf-dops">
+            <button class="btn-mini" id="pf-d-view">查看前台</button>
+            <button class="btn-mini" id="pf-d-copy">复制链接</button>
           </div>
         </div>
-        <div class="form-row">
-          <label>水印文字</label>
-          <input type="text" id="set-wm-text" placeholder="例如：内容由 {name} 创作 · 感谢您的关注">
-          <div class="tip">用 <b>{name}</b> 代替需要加粗的名字</div>
+
+        <!-- 基本信息 -->
+        <div class="card">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            基本信息
+          </h2>
+          <div class="frows">
+            <div class="frow">
+              <div class="frow-l"><label>作品集名称</label></div>
+              <div class="ctrl"><input type="text" id="db-title" maxlength="100" placeholder="作品集名称"></div>
+            </div>
+            <div class="frow">
+              <div class="frow-l">
+                <label>访问链接</label>
+                <div class="frow-desc" id="db-url">/slug</div>
+              </div>
+              <div class="ctrl"><input type="text" id="db-slug" maxlength="30" placeholder="字母数字连字符"></div>
+            </div>
+            <div class="frow">
+              <div class="frow-l">
+                <label>对外发布</label>
+                <div class="frow-desc">关闭后访客无法访问该作品集</div>
+              </div>
+              <div class="ctrl"><div class="switch"><input type="checkbox" id="db-published"><span></span></div></div>
+            </div>
+          </div>
+          <div class="card-ops">
+            <button class="btn-save" id="db-save">保存基本信息</button>
+            <span class="ok-msg" id="db-msg"></span>
+          </div>
         </div>
-        <div class="form-row">
-          <label>加粗名字</label>
-          <input type="text" id="set-wm-name" placeholder="水印中加粗显示的名字">
+
+        <!-- 访问控制 -->
+        <div class="card">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            访问控制
+            <span class="tag" id="ac-views-tag"></span>
+          </h2>
+          <div class="frows">
+            <div class="frow">
+              <div class="frow-l">
+                <label>访问密码</label>
+                <div class="frow-desc" id="ac-pass-desc">设置后访客需输入密码才能查看全部内容</div>
+              </div>
+              <div class="ctrl"><input type="text" id="ac-pass" maxlength="64" placeholder="留空 = 无需密码" autocomplete="off"></div>
+            </div>
+            <div class="frow" id="ac-clear-row" style="display:none">
+              <div class="frow-l">
+                <label>清除密码</label>
+                <div class="frow-desc">勾选后移除访问密码</div>
+              </div>
+              <div class="ctrl"><div class="switch"><input type="checkbox" id="ac-clear"><span></span></div></div>
+            </div>
+            <div class="frow">
+              <div class="frow-l">
+                <label>预览页数</label>
+                <div class="frow-desc">设置密码后，未解锁访客可免费预览前 N 页（0 = 需密码才能查看）</div>
+              </div>
+              <div class="ctrl"><input type="number" id="ac-preview" min="0" max="500" placeholder="0"></div>
+            </div>
+            <div class="frow">
+              <div class="frow-l">
+                <label>访问上限</label>
+                <div class="frow-desc">累计访问次数达到上限后链接自动失效（0 = 不限制）</div>
+              </div>
+              <div class="ctrl"><input type="number" id="ac-limit" min="0" placeholder="0"></div>
+            </div>
+            <div class="frow">
+              <div class="frow-l">
+                <label>永久有效</label>
+                <div class="frow-desc">关闭后可设置失效日期，到期后链接自动失效</div>
+              </div>
+              <div class="ctrl"><div class="switch"><input type="checkbox" id="ac-perm" checked><span></span></div></div>
+            </div>
+            <div class="frow" id="ac-expire-row" style="display:none">
+              <div class="frow-l">
+                <label>失效日期</label>
+                <div class="frow-desc" id="ac-expire-desc">当天 23:59 后链接失效</div>
+              </div>
+              <div class="ctrl"><input type="date" id="ac-date"></div>
+            </div>
+          </div>
+          <div class="card-ops">
+            <button class="btn-save" id="ac-save">保存访问控制</button>
+            <span class="ok-msg" id="ac-msg"></span>
+          </div>
+        </div>
+
+        <!-- 页面管理 -->
+        <div class="card">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+            页面管理 <span class="tag">隐藏不需要展示的页，调整前后顺序</span>
+          </h2>
+          <div class="pg-toolbar">
+            <button class="btn-ghost" id="pg-all">全部显示</button>
+            <button class="btn-ghost" id="pg-reset">恢复原始顺序</button>
+            <span class="pg-toolbar-sp"></span>
+            <button class="btn-save" id="pg-save" style="padding:9px 22px">保存页面设置</button>
+            <span class="ok-msg" id="pg-msg"></span>
+          </div>
+          <div class="loading-inline" id="pg-loading" style="display:none">正在加载页面缩略图…</div>
+          <div class="pg-grid" id="pg-grid"></div>
+        </div>
+
+        <!-- 文件管理：上传 -->
+        <div class="card">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            上传 / 替换内容 <span class="tag">PDF 转高清图片</span>
+          </h2>
+          <div class="file-row">
+            <input type="file" id="pdf-file" accept="application/pdf,.pdf">
+            <button class="btn-ghost" id="pdf-pick">选择 PDF 文件</button>
+            <button class="btn-save" id="pdf-upload" style="padding:9px 22px">上传</button>
+          </div>
+          <div class="file-info" id="pdf-info">未上传</div>
+          <div class="progress" id="pdf-progress"><div class="fill"></div></div>
+          <div class="file-info" style="margin-top:8px;color:var(--muted)" id="pdf-status"></div>
+          <div class="upload-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            上传时会自动把每页转成高清图片，前台秒开。首次上传大文件需要几分钟，请耐心等待进度完成。
+          </div>
+        </div>
+
+        <!-- 文件管理：删除 -->
+        <div class="card danger">
+          <h2 class="danger-h">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            删除作品集 <span class="tag">不可撤销</span>
+          </h2>
+          <p style="font-size:13px;color:var(--muted);margin:12px 0 14px">删除后该作品集链接立即失效，所有页面图片将被永久清除。站点设置与其他作品集不受影响。</p>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button class="btn-danger" id="pf-del">删除该作品集</button>
+            <span class="ok-msg" id="del-msg"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== 站点设置 ======================== -->
+    <div class="panel" id="panel-site">
+      <!-- 系统信息 -->
+      <div class="card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          系统信息 <span class="tag">全站生效</span>
+        </h2>
+        <div class="frows">
+          <div class="frow">
+            <div class="frow-l">
+              <label>站点标题</label>
+              <div class="frow-desc">浏览器标签页与分享卡片显示的名称</div>
+            </div>
+            <div class="ctrl"><input type="text" id="set-title" maxlength="100" placeholder="如：李明的作品集"></div>
+          </div>
+          <div class="frow">
+            <div class="frow-l">
+              <label>站点描述</label>
+              <div class="frow-desc">用于搜索引擎展示的简介（选填）</div>
+            </div>
+            <div class="ctrl"><textarea id="set-desc" maxlength="200" placeholder="如：品牌设计 · 包装设计 · 视觉传达，从业 8 年"></textarea></div>
+          </div>
+        </div>
+        <div class="card-ops">
+          <button class="btn-save" id="save-site">保存系统信息</button>
+          <span class="ok-msg" id="site-msg"></span>
+        </div>
+      </div>
+
+      <!-- 主题设置 -->
+      <div class="card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+          主题设置 <span class="tag">前台强调色，点击即生效</span>
+        </h2>
+        <div class="theme-grid" id="theme-grid"></div>
+        <div class="ok-msg" id="theme-msg" style="margin-top:12px"></div>
+      </div>
+
+      <!-- 网站图标 -->
+      <div class="card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          网站图标 <span class="tag">浏览器标签页图标</span>
+        </h2>
+        <div class="fav-layout">
+          <div class="fav-tab-wrap">
+            <div class="fav-tab-bar">
+              <div class="fav-tab">
+                <img id="fav-img" alt="" style="display:none">
+                <span class="t" id="fav-tab-title">作品集</span>
+                <span class="x">×</span>
+              </div>
+            </div>
+            <div class="cap">标签页效果预览</div>
+          </div>
+          <div class="fav-right">
+            <div class="file-row">
+              <input type="file" id="fav-file" accept="image/*">
+              <button class="btn-ghost" id="fav-pick">选择图片</button>
+              <button class="btn-save" id="fav-upload" style="padding:9px 22px">上传图标</button>
+            </div>
+            <div class="file-info" id="fav-status" style="color:var(--muted)">建议使用正方形 PNG，不超过 1MB</div>
+            <div class="progress" id="fav-progress"><div class="fill"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 水印设置 -->
+      <div class="card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+          水印设置 <span class="tag">保护原创内容</span>
+        </h2>
+        <div class="frows">
+          <div class="frow">
+            <div class="frow-l">
+              <label>显示水印</label>
+              <div class="frow-desc">关闭后前台不显示任何水印</div>
+            </div>
+            <div class="ctrl"><div class="switch"><input type="checkbox" id="set-wm-on"><span></span></div></div>
+          </div>
+          <div class="frow">
+            <div class="frow-l">
+              <label>动态水印</label>
+              <div class="frow-desc">自动附加访客 IP 与访问时间，防止转发截图</div>
+            </div>
+            <div class="ctrl"><div class="switch"><input type="checkbox" id="set-wm-dyn"><span></span></div></div>
+          </div>
+          <div class="frow">
+            <div class="frow-l">
+              <label>水印样式</label>
+              <div class="frow-desc" id="wm-style-desc">胶囊：底部居中磨砂条 · 斜纹平铺：半透明文字覆盖全屏</div>
+            </div>
+            <div class="ctrl">
+              <div class="seg">
+                <button type="button" id="wm-style-capsule" class="on">胶囊水印</button>
+                <button type="button" id="wm-style-tile">斜纹平铺</button>
+              </div>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="frow-l">
+              <label>水印文字</label>
+              <div class="frow-desc">用 <b>{ }</b> 包裹需要加粗的名字，如：内容由 <b>{李明}</b> 创作 · 感谢观看</div>
+            </div>
+            <div class="ctrl"><input type="text" id="set-wm-text" maxlength="300" placeholder="内容由 {李明} 创作 · 感谢您的关注"></div>
+          </div>
         </div>
         <div class="wm-preview-box">
           <div class="wm-preview-label">实时预览</div>
           <div class="wm-preview" id="wm-preview">
             <div class="wm-preview-img"></div>
-            <div class="wm-capsule" id="wm-prev-capsule">内容由 <b>名字</b> 创作 · 感谢您的关注</div>
+            <div class="wm-capsule" id="wm-prev-capsule">内容由 <b>名字</b> 创作</div>
             <div class="wm-tile-bg" id="wm-prev-tile" style="display:none"></div>
           </div>
-          <div class="wm-preview-note" id="wm-prev-note">胶囊：底部居中磨砂条 · 斜纹平铺：半透明文字覆盖全屏（防截图分享）</div>
+          <div class="wm-preview-note" id="wm-prev-note"></div>
         </div>
-        <div style="margin-top:16px">
-          <button class="btn-save" id="save-settings2">保存设置</button>
-          <span class="ok-msg" id="settings-msg2"></span>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13 1 .37 2 .72 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.35 1.9.6 2.8.72A2 2 0 0 1 22 16.9z"/></svg> 联系方式 <span class="tag">前台底部按钮</span></h2>
-        <div class="form-row">
-          <label>电话按钮</label>
-          <div class="switch"><input type="checkbox" id="set-phone-on"><span></span></div>
-        </div>
-        <div class="form-row">
-          <label>电话号码</label>
-          <input type="text" id="set-phone" placeholder="仅数字，例如 13999679589" inputmode="numeric">
-        </div>
-        <div class="form-row">
-          <label>微信按钮</label>
-          <div class="switch"><input type="checkbox" id="set-qr-on"><span></span></div>
-        </div>
-        <div class="form-row">
-          <label>微信号</label>
-          <input type="text" id="set-wxid" placeholder="选填，填写后手机端可一键复制并打开微信">
-          <div class="tip">填了微信号：手机访客点击微信按钮会自动复制，一键打开微信搜索添加</div>
-        </div>
-        <div style="margin-top:16px">
-          <button class="btn-save" id="save-settings3">保存设置</button>
-          <span class="ok-msg" id="settings-msg3"></span>
+        <div class="card-ops">
+          <button class="btn-save" id="save-wm">保存水印设置</button>
+          <span class="ok-msg" id="wm-msg"></span>
         </div>
       </div>
 
+      <!-- 联系方式 -->
       <div class="card">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7zM14 14h3v3h-3zM14 7h3v3h-3zM7 14h3v3H7z"/></svg> 微信二维码 <span class="tag">前台扫码加好友</span></h2>
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13 1 .37 2 .72 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.35 1.9.6 2.8.72A2 2 0 0 1 22 16.9z"/></svg>
+          联系方式 <span class="tag">前台右下角按钮</span>
+        </h2>
+        <div class="frows">
+          <div class="frow">
+            <div class="frow-l">
+              <label>电话按钮</label>
+              <div class="frow-desc">前台右下角显示一键拨号按钮</div>
+            </div>
+            <div class="ctrl"><div class="switch"><input type="checkbox" id="set-phone-on"><span></span></div></div>
+          </div>
+          <div class="frow">
+            <div class="frow-l">
+              <label>电话号码</label>
+              <div class="frow-desc">仅数字，如 13900001111</div>
+            </div>
+            <div class="ctrl"><input type="text" id="set-phone" inputmode="numeric" maxlength="20" placeholder="电话号码"></div>
+          </div>
+          <div class="frow">
+            <div class="frow-l">
+              <label>微信按钮</label>
+              <div class="frow-desc">前台右下角显示微信扫码按钮</div>
+            </div>
+            <div class="ctrl"><div class="switch"><input type="checkbox" id="set-qr-on"><span></span></div></div>
+          </div>
+          <div class="frow">
+            <div class="frow-l">
+              <label>微信号</label>
+              <div class="frow-desc">填写后手机端点击微信按钮自动复制并打开微信</div>
+            </div>
+            <div class="ctrl"><input type="text" id="set-wxid" maxlength="30" placeholder="微信号（选填）"></div>
+          </div>
+        </div>
+        <div class="card-ops">
+          <button class="btn-save" id="save-contact">保存联系方式</button>
+          <span class="ok-msg" id="contact-msg"></span>
+        </div>
+      </div>
+
+      <!-- 微信二维码 -->
+      <div class="card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7zM14 14h3v3h-3zM14 7h3v3h-3zM7 14h3v3H7z"/></svg>
+          微信二维码 <span class="tag">前台扫码加好友</span>
+        </h2>
         <div class="qr-layout">
           <div class="qr-left">
             <img class="qr-preview" id="qr-preview" alt="当前二维码">
-            <div class="qr-empty" id="qr-empty" style="display:none">未上传<br>二维码</div>
+            <div class="qr-empty" id="qr-empty">未上传<br>二维码</div>
           </div>
           <div class="qr-right">
             <div class="file-row">
@@ -695,73 +1001,72 @@
               <button class="btn-ghost" id="qr-pick">选择图片</button>
               <button class="btn-save" id="qr-upload" style="padding:9px 22px">上传替换</button>
             </div>
-            <div class="file-info" id="qr-upload-status" style="color:var(--muted)"></div>
+            <div class="file-info" id="qr-status" style="color:var(--muted)">支持 JPG / PNG，不超过 4MB</div>
             <div class="progress" id="qr-progress"><div class="fill"></div></div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 页面管理 -->
-    <div class="panel" id="panel-pages">
-      <div class="pf-selector">
-        <label>操作作品集</label>
-        <select id="pg-pf-select"></select>
-        <div class="pf-selector-stats" id="pg-stats"></div>
-      </div>
+      <!-- 邮件提醒 -->
       <div class="card">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg> 页面管理 <span class="tag">隐藏不需要展示的页，调整前后顺序</span></h2>
-        <div class="pg-toolbar">
-          <button class="btn-ghost" id="pg-all">全部显示</button>
-          <button class="btn-ghost" id="pg-reset">恢复原始顺序</button>
-          <span class="pg-toolbar-sp"></span>
-          <button class="btn-save" id="pg-save" style="padding:9px 22px">保存页面设置</button>
-          <span class="ok-msg" id="pg-msg"></span>
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>
+          邮件提醒 <span class="tag">有访客时通知您</span>
+        </h2>
+        <div class="frows">
+          <div class="frow">
+            <div class="frow-l">
+              <label>启用提醒</label>
+              <div class="frow-desc">开启后每次有访客浏览作品集都会收到邮件（10 分钟内合并为一封）</div>
+            </div>
+            <div class="ctrl"><div class="switch"><input type="checkbox" id="set-email-on"><span></span></div></div>
+          </div>
+          <div class="frow">
+            <div class="frow-l">
+              <label>接收邮箱</label>
+              <div class="frow-desc">提醒将发送到该邮箱</div>
+            </div>
+            <div class="ctrl"><input type="text" id="set-email-to" maxlength="120" placeholder="you@example.com"></div>
+          </div>
+          <div class="frow">
+            <div class="frow-l">
+              <label>发件人</label>
+              <div class="frow-desc">Resend 发件地址，默认 onboarding@resend.dev</div>
+            </div>
+            <div class="ctrl"><input type="text" id="set-email-from" maxlength="120" placeholder="Portfolio <onboarding@resend.dev>"></div>
+          </div>
+          <div class="frow">
+            <div class="frow-l">
+              <label>Resend API Key</label>
+              <div class="frow-desc">在 resend.com 免费注册获取；保存后不再显示</div>
+            </div>
+            <div class="ctrl"><input type="password" id="set-email-key" maxlength="200" placeholder="re_xxxxxxxx" autocomplete="new-password"></div>
+          </div>
         </div>
-        <div class="loading-inline" id="pg-loading">正在加载页面缩略图…</div>
-        <div class="pg-grid" id="pg-grid"></div>
+        <div class="card-ops">
+          <button class="btn-save" id="save-email">保存邮件设置</button>
+          <button class="btn-ghost" id="test-email">发送测试邮件</button>
+          <span class="ok-msg" id="email-msg"></span>
+        </div>
       </div>
-    </div>
 
-    <!-- 文件管理 -->
-    <div class="panel" id="panel-files">
-      <div class="pf-selector">
-        <label>操作作品集</label>
-        <select id="file-pf-select"></select>
-        <div class="pf-selector-stats" id="file-pf-stats"></div>
-      </div>
+      <!-- 修改密码 -->
       <div class="card">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> 作品集上传 <span class="tag">上传 / 替换页面图片</span></h2>
-        <div class="file-row">
-          <input type="file" id="pdf-file" accept="application/pdf,.pdf">
-          <button class="btn-ghost" id="pdf-pick">选择 PDF 文件</button>
-          <button class="btn-save" id="pdf-upload" style="padding:9px 22px">上传</button>
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          修改管理密码
+        </h2>
+        <div class="frows">
+          <div class="frow">
+            <div class="frow-l"><label>新密码</label><div class="frow-desc">至少 8 位</div></div>
+            <div class="ctrl"><input type="password" id="np1" maxlength="64" placeholder="新密码" autocomplete="new-password"></div>
+          </div>
+          <div class="frow">
+            <div class="frow-l"><label>确认密码</label><div class="frow-desc">再输入一次</div></div>
+            <div class="ctrl"><input type="password" id="np2" maxlength="64" placeholder="确认密码" autocomplete="new-password"></div>
+          </div>
         </div>
-        <div class="file-info" id="pdf-info" style="margin-top:10px">未上传</div>
-        <div class="progress" id="pdf-progress"><div class="fill"></div></div>
-        <div class="file-info" style="margin-top:8px;color:var(--muted)" id="pdf-upload-status"></div>
-        <div class="upload-note">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          上传时会自动把每页转成高清图片，前台秒开。首次上传大文件需要几分钟，请耐心等待进度完成。
-        </div>
-      </div>
-      <div class="card danger" id="delete-card">
-        <h2 class="danger-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> 删除作品集 <span class="tag">不可撤销</span></h2>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px">删除后该作品集链接立即失效，所有页面图片将被永久清除。站点设置与其他作品集不受影响。</p>
-        <div style="display:flex;gap:10px;align-items:center">
-          <button class="btn-danger" id="pdf-delete">删除当前作品集</button>
-          <span class="ok-msg" id="delete-msg"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 修改密码 -->
-    <div class="panel" id="panel-passwd">
-      <div class="card" style="max-width:440px">
-        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> 修改管理密码</h2>
-        <div class="form-row"><label>新密码</label><input type="password" id="np1" class="pw-input" placeholder="至少 8 位" autocomplete="new-password"></div>
-        <div class="form-row"><label>确认密码</label><input type="password" id="np2" class="pw-input" placeholder="再输入一次" autocomplete="new-password"></div>
-        <div style="margin-top:12px">
+        <div class="card-ops">
           <button class="btn-save" id="save-passwd">修改密码</button>
           <span class="ok-msg" id="passwd-msg"></span>
         </div>
@@ -770,42 +1075,36 @@
   </div>
 </div>
 
-<!-- 作品集 新建/编辑 弹窗 -->
+<!-- 新建作品集弹窗 -->
 <div class="modal-mask" id="pf-modal">
   <div class="modal">
-    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> <span id="pf-modal-title">新建作品集</span></h3>
-    <div class="form-row">
-      <label>名称</label>
-      <input type="text" id="pfm-title" class="pw-input" placeholder="作品集名称，如：品牌设计 2026" maxlength="100">
-    </div>
-    <div class="form-row">
-      <label>访问链接</label>
-      <input type="text" id="pfm-slug" class="pw-input" placeholder="字母数字连字符，如 brand-2026" maxlength="30">
-      <div class="tip">访问地址：<b id="pfm-url-preview">/</b>（留空自动生成）</div>
-    </div>
-    <div class="form-row">
-      <label>访问密码</label>
-      <input type="text" id="pfm-password" class="pw-input" placeholder="留空 = 无需密码" maxlength="64">
-      <div class="tip" id="pfm-pass-tip">设置后访客需输入密码才能查看</div>
-    </div>
-    <div class="form-row" id="pfm-clear-row" style="display:none">
-      <label>清除密码</label>
-      <div class="switch"><input type="checkbox" id="pfm-clear-pass"><span></span></div>
-      <span style="font-size:13px;color:var(--muted)">勾选后移除访问密码</span>
-    </div>
-    <div class="form-row">
-      <label>访问上限</label>
-      <input type="text" id="pfm-limit" class="pw-input" placeholder="0 = 不限制" inputmode="numeric" maxlength="7">
-      <div class="tip">累计访问次数达到上限后链接失效（当前 <b id="pfm-views">0</b> 次）</div>
-    </div>
-    <div class="form-row">
-      <label>发布状态</label>
-      <div class="switch"><input type="checkbox" id="pfm-published" checked><span></span></div>
-      <span style="font-size:13px;color:var(--muted)">对外可见</span>
+    <h3>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      新建作品集
+    </h3>
+    <div class="frows">
+      <div class="frow">
+        <div class="frow-l"><label>名称</label></div>
+        <div class="ctrl"><input type="text" id="pfm-title" maxlength="100" placeholder="如：品牌设计 2026"></div>
+      </div>
+      <div class="frow">
+        <div class="frow-l">
+          <label>访问链接</label>
+          <div class="frow-desc" id="pfm-url">/（自动生成）</div>
+        </div>
+        <div class="ctrl"><input type="text" id="pfm-slug" maxlength="30" placeholder="字母数字连字符"></div>
+      </div>
+      <div class="frow">
+        <div class="frow-l">
+          <label>访问密码</label>
+          <div class="frow-desc">选填，创建后可在详情页调整</div>
+        </div>
+        <div class="ctrl"><input type="text" id="pfm-password" maxlength="64" placeholder="留空 = 无需密码" autocomplete="off"></div>
+      </div>
     </div>
     <div class="modal-ops">
       <button class="btn-ghost" id="pfm-cancel">取消</button>
-      <button class="btn-save" id="pfm-save">保 存</button>
+      <button class="btn-save" id="pfm-save">创 建</button>
     </div>
   </div>
 </div>
@@ -837,8 +1136,6 @@ async function ensurePdfjs() {
 }
 
 // jSquash WebP 编码器（基于 Google libwebp 的 WebAssembly 移植）
-// 同等画质下比 JPEG 小 25-35%，视觉无损压缩
-// 加载失败时自动降级为浏览器原生 canvas.toBlob (JPEG)
 let _webpEncoder = null;
 let _webpTried = false;
 async function ensureWebpEncoder() {
@@ -853,6 +1150,7 @@ async function ensureWebpEncoder() {
   }
   return _webpEncoder;
 }
+
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s || '').replace(/[&<>"']/g, (m) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -893,298 +1191,19 @@ function showApp() {
   $('login-view').style.display = 'none';
   $('app-view').style.display = 'block';
   loadPortfolios();
-  loadSettingsAndFiles();
-  loadStats();
+  loadSite();
+  loadStats(false);
 }
 
-// ---------- 作品集管理 ----------
-let PF_LIST = [];
-let curPfId = null; // 当前操作的作品集
-
-async function loadPortfolios() {
-  try {
-    const d = await API.req('/api/portfolios');
-    if (!d.ok) return;
-    PF_LIST = d.portfolios || [];
-    if (!PF_LIST.length) {
-      // 全新站点：自动创建第一个作品集
-      try {
-        const created = await API.req('/api/portfolios', { method: 'POST', json: { title: '我的第一个作品集' } });
-        if (created.ok) {
-          const d2 = await API.req('/api/portfolios');
-          if (d2.ok) PF_LIST = d2.portfolios || [];
-        }
-      } catch (e) {}
-    }
-    if (!curPfId && PF_LIST.length) curPfId = PF_LIST[0].id;
-    renderPfList();
-    renderPfSelectors();
-    renderPfRank(); // 作品集列表就绪后，回填概览里的作品集排行标题
-  } catch (e) {}
-}
-
-// 作品集卡片缩略图（取当前版本第 1 页）
-function pfThumb(p) {
-  if (!p.pages || !p.pages.count || !p.pages.version) return null;
-  const slug = p.r2_prefix === '' ? 'default' : p.slug; // 兼容旧版无前缀存储
-  return '/api/file/' + encodeURIComponent(slug) + '/page/v' + p.pages.version + '/1.webp';
-}
-
-function renderPfList() {
-  const list = $('pf-list');
-  if (!PF_LIST.length) {
-    list.innerHTML = '<div class="loading-inline">暂无作品集，点击右上角新建</div>';
-    return;
-  }
-  $('pf-count').textContent = PF_LIST.length + ' / 20 个';
-  list.innerHTML = '';
-  PF_LIST.forEach((p, i) => {
-    const el = document.createElement('div');
-    el.className = 'pf-item' + (p.id === curPfId ? ' cur' : '');
-    const thumb = pfThumb(p);
-    const badges = [];
-    if (p.password_protected) badges.push('<span class="badge lock">🔒</span>');
-    if (!p.is_published) badges.push('<span class="badge off">未发布</span>');
-    if (p.visit_limit > 0) badges.push('<span class="badge limit">' + p.views + '/' + p.visit_limit + '</span>');
-    const limitPct = p.visit_limit > 0 ? Math.min(100, Math.round((p.views / p.visit_limit) * 100)) : 0;
-    el.innerHTML =
-      '<div class="pf-thumb">' +
-      (thumb
-        ? '<img loading="lazy" src="' + thumb + '" alt="" draggable="false">'
-        : '<div class="pf-thumb-empty">未上传</div>') +
-      (p.id === curPfId ? '<span class="pf-cur-mark">当前</span>' : '') +
-      '</div>' +
-      '<div class="pf-body">' +
-      '<div class="pf-title-row">' +
-      '<div class="pf-title" title="' + esc(p.title) + '">' + esc(p.title) + '</div>' +
-      '<div class="pf-badges">' + badges.join('') + '</div>' +
-      '</div>' +
-      '<div class="pf-meta">' +
-      '<span class="u">/' + esc(p.slug) + '</span>' +
-      '<span>' + (p.page_count || 0) + ' 页</span>' +
-      '<span>' + (p.views || 0) + ' 次访问</span>' +
-      '</div>' +
-      (p.visit_limit > 0
-        ? '<div class="pf-limit-track" title="访问上限进度"><div class="pf-limit-fill' + (limitPct >= 100 ? ' full' : '') + '" style="width:' + limitPct + '%"></div></div>'
-        : '') +
-      '<div class="pf-ops">' +
-      '<button class="btn-mini" data-op="view" data-id="' + p.id + '">查看</button>' +
-      '<button class="btn-mini" data-op="copy" data-id="' + p.id + '">复制链接</button>' +
-      '<button class="btn-mini" data-op="edit" data-id="' + p.id + '">编辑</button>' +
-      '<button class="btn-mini icon" data-op="up" data-id="' + p.id + '" title="上移" ' + (i === 0 ? 'disabled' : '') + '><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></button>' +
-      '<button class="btn-mini icon" data-op="down" data-id="' + p.id + '" title="下移" ' + (i === PF_LIST.length - 1 ? 'disabled' : '') + '><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>' +
-      '<button class="btn-mini icon del" data-op="del" data-id="' + p.id + '" title="删除"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
-      '</div>' +
-      '</div>';
-    list.appendChild(el);
-  });
-}
-
-function renderPfSelectors() {
-  const opts = PF_LIST.map((p) => '<option value="' + p.id + '">' + esc(p.title) + ' · /' + esc(p.slug) + '</option>').join('');
-  const pgSel = $('pg-pf-select');
-  const fileSel = $('file-pf-select');
-  pgSel.innerHTML = opts;
-  fileSel.innerHTML = opts;
-  if (curPfId != null) {
-    pgSel.value = String(curPfId);
-    fileSel.value = String(curPfId);
-  }
-  updatePfInfo();
-  pgState = null; // 切换作品集后重置页面管理缓存
-}
-
-function getPf(id) {
-  return PF_LIST.find((p) => p.id === Number(id)) || null;
-}
-
-// 当前选中作品集变化时刷新上传/页面面板信息
-function updatePfInfo() {
-  const p = getPf(curPfId);
-  if (!p) return;
-  // 选择器旁边的统计胶囊
-  const statsHtml =
-    '<span><b>' + (p.page_count || 0) + '</b> 页</span>' +
-    '<span><b>' + (p.views || 0) + '</b> 次访问</span>' +
-    (p.pages && p.pages.version ? '<span>v<b>' + p.pages.version + '</b></span>' : '') +
-    (p.is_published ? '' : '<span style="color:var(--warning);background:#FEF3C7">未发布</span>');
-  $('pg-stats').innerHTML = statsHtml;
-  $('file-pf-stats').innerHTML = statsHtml;
-  if (p.pages && p.pages.count > 0) {
-    $('pdf-info').innerHTML = esc(p.title) + '：v' + p.pages.version + ' · 共 ' + p.pages.count + ' 页';
-    $('delete-card').style.display = 'block';
-    $('pdf-upload').textContent = '上传替换';
-  } else {
-    $('pdf-info').textContent = '该作品集尚未上传内容，请选择 PDF 文件上传';
-    $('delete-card').style.display = 'block';
-    $('pdf-upload').textContent = '上传作品集';
-  }
-}
-
-$('pg-pf-select').addEventListener('change', (e) => {
-  curPfId = parseInt(e.target.value, 10);
-  $('file-pf-select').value = e.target.value;
-  pgState = null;
-  renderPfList();
-  updatePfInfo();
-  initPageManager();
-});
-$('file-pf-select').addEventListener('change', (e) => {
-  curPfId = parseInt(e.target.value, 10);
-  $('pg-pf-select').value = e.target.value;
-  renderPfList();
-  updatePfInfo();
-});
-
-// 列表操作
-$('pf-list').addEventListener('click', async (e) => {
-  const btn = e.target.closest('button[data-op]');
-  if (!btn) return;
-  const p = getPf(btn.dataset.id);
-  if (!p) return;
-  const op = btn.dataset.op;
-  if (op === 'up' || op === 'down') {
-    // 上下移动并持久化新顺序
-    const idx = PF_LIST.findIndex((x) => x.id === p.id);
-    const to = op === 'up' ? idx - 1 : idx + 1;
-    if (to < 0 || to >= PF_LIST.length) return;
-    btn.disabled = true;
-    [PF_LIST[idx], PF_LIST[to]] = [PF_LIST[to], PF_LIST[idx]];
-    renderPfList();
-    try {
-      const d = await API.req('/api/portfolios', {
-        method: 'PUT',
-        json: { order: PF_LIST.map((x) => x.id) },
-      });
-      if (!d.ok) {
-        PF_LIST.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-        renderPfList();
-        alert(d.error || '排序保存失败');
-      } else {
-        PF_LIST.forEach((x, i) => (x.sort_order = i));
-        renderPfSelectors();
-      }
-    } catch (err) {
-      PF_LIST.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-      renderPfList();
-      alert('网络错误，排序未保存');
-    }
-    return;
-  }
-  if (op === 'view') {
-    window.open('/' + encodeURIComponent(p.slug), '_blank');
-  } else if (op === 'copy') {
-    const url = location.origin + '/' + p.slug;
-    try {
-      await navigator.clipboard.writeText(url);
-      btn.textContent = '已复制 ✓';
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = url;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      ta.remove();
-      btn.textContent = '已复制 ✓';
-    }
-    setTimeout(() => (btn.textContent = '复制链接'), 1500);
-  } else if (op === 'edit') {
-    openPfModal(p);
-  } else if (op === 'del') {
-    if (!confirm('确定删除作品集「' + p.title + '」吗？\n\n所有页面图片将被永久清除，此操作不可撤销。')) return;
-    btn.disabled = true;
-    btn.textContent = '删除中…';
-    try {
-      const d = await API.req('/api/portfolios?id=' + p.id, { method: 'DELETE' });
-      if (d.ok) {
-        if (curPfId === p.id) curPfId = null;
-        await loadPortfolios();
-      } else {
-        alert(d.error || '删除失败');
-        btn.disabled = false;
-        btn.textContent = '删除';
-      }
-    } catch (err) {
-      btn.disabled = false;
-      btn.textContent = '删除';
-    }
-  }
-});
-
-// ---------- 新建/编辑弹窗 ----------
-let modalMode = 'new'; // new | edit
-let modalEditId = null;
-
-function openPfModal(p) {
-  modalMode = p ? 'edit' : 'new';
-  modalEditId = p ? p.id : null;
-  $('pf-modal-title').textContent = p ? '编辑作品集' : '新建作品集';
-  $('pfm-title').value = p ? p.title : '';
-  $('pfm-slug').value = p ? p.slug : '';
-  $('pfm-password').value = '';
-  $('pfm-limit').value = p ? (p.visit_limit || 0) : '';
-  $('pfm-published').checked = p ? p.is_published : true;
-  $('pfm-views').textContent = p ? (p.views || 0) : 0;
-  $('pfm-pass-tip').textContent = p && p.password_protected
-    ? '已设置密码。留空 = 保持不变，输入新值 = 替换'
-    : '设置后访客需输入密码才能查看';
-  $('pfm-clear-row').style.display = p && p.password_protected ? 'flex' : 'none';
-  $('pfm-clear-pass').checked = false;
-  updateSlugPreview();
-  $('pf-modal').classList.add('open');
-  setTimeout(() => $('pfm-title').focus(), 50);
-}
-
-function updateSlugPreview() {
-  const v = $('pfm-slug').value.trim();
-  $('pfm-url-preview').textContent = v ? '/' + v : '/（自动生成）';
-}
-$('pfm-slug').addEventListener('input', updateSlugPreview);
-
-$('pf-new').addEventListener('click', () => openPfModal(null));
-$('pfm-cancel').addEventListener('click', () => $('pf-modal').classList.remove('open'));
-$('pf-modal').addEventListener('click', (e) => {
-  if (e.target === $('pf-modal')) $('pf-modal').classList.remove('open');
-});
-
-$('pfm-save').addEventListener('click', async () => {
-  const btn = $('pfm-save');
-  const title = $('pfm-title').value.trim();
-  if (!title) { $('pfm-title').focus(); return; }
-  const slug = $('pfm-slug').value.trim();
-  const password = $('pfm-password').value;
-  const visitLimit = Math.max(0, parseInt($('pfm-limit').value, 10) || 0);
-
-  btn.disabled = true; btn.textContent = '保存中…';
-  try {
-    let d;
-    if (modalMode === 'new') {
-      d = await API.req('/api/portfolios', {
-        method: 'POST',
-        json: { title, slug, password: password || undefined, visit_limit: visitLimit },
-      });
-    } else {
-      const body = {
-        id: modalEditId,
-        title,
-        slug,
-        visit_limit: visitLimit,
-        is_published: $('pfm-published').checked,
-      };
-      if (password) body.password = password;
-      if ($('pfm-clear-pass').checked) body.clear_password = true;
-      d = await API.req('/api/portfolios', { method: 'PUT', json: body });
-    }
-    if (d.ok) {
-      $('pf-modal').classList.remove('open');
-      await loadPortfolios();
-    } else {
-      alert(d.error || '保存失败');
-    }
-  } catch (e) {
-    alert('网络错误，请重试');
-  }
-  btn.disabled = false; btn.textContent = '保 存';
+// ---------- Tab ----------
+$('tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-tab]');
+  if (!b) return;
+  document.querySelectorAll('#tabs button').forEach((x) => x.classList.remove('on'));
+  b.classList.add('on');
+  document.querySelectorAll('.panel').forEach((x) => x.classList.remove('on'));
+  $('panel-' + b.dataset.tab).classList.add('on');
+  if (b.dataset.tab === 'overview') loadStats(false);
 });
 
 // ---------- 登录 ----------
@@ -1218,352 +1237,327 @@ $('login-btn').addEventListener('click', doLogin);
 $('login-pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
 $('logout-btn').addEventListener('click', showLogin);
 
-// ---------- Tab ----------
-$('tabs').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-tab]');
-  if (!b) return;
-  document.querySelectorAll('#tabs button').forEach((x) => x.classList.remove('on'));
-  b.classList.add('on');
-  document.querySelectorAll('.panel').forEach((x) => x.classList.remove('on'));
-  $('panel-' + b.dataset.tab).classList.add('on');
-  if (b.dataset.tab === 'overview') loadStats();
-  if (b.dataset.tab === 'pages') initPageManager();
-});
+// ==================== 作品集管理 ====================
+let PF_LIST = [];
+let FILE_TOKEN = ''; // 管理端文件访问令牌（受密码保护作品集的缩略图可用）
+let viewMode = 'list'; // list | detail
+let curPfId = null;
 
-// ---------- 内容设置（分组卡片 + 水印实时预览） ----------
-let WM_STYLE = 'capsule'; // capsule | tile
-
-function updateWmPreview() {
-  const text = $('set-wm-text').value;
-  const name = $('set-wm-name').value;
-  const raw = (text || '内容由 {name} 创作 · 感谢您的关注').replace(/\{name\}/g, name || '名字');
-  // 胶囊
-  const capEl = $('wm-prev-capsule');
-  capEl.innerHTML = esc(raw).replace(esc(name || '名字'), '<b>' + esc(name || '名字') + '</b>');
-  // 斜纹平铺（SVG 背景平铺，与前台一致）
-  const svgText = String(raw).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
-  const svg =
-    "<svg xmlns='http://www.w3.org/2000/svg' width='200' height='130'>" +
-    "<text x='100' y='70' font-size='12' fill='rgba(255,255,255,0.16)' font-family='-apple-system,PingFang SC,Microsoft YaHei,sans-serif' text-anchor='middle' transform='rotate(-22 100 60)'>" +
-    svgText + '</text></svg>';
-  $('wm-prev-tile').style.backgroundImage = "url(\"data:image/svg+xml," + encodeURIComponent(svg) + "\")";
-  // 样式切换
-  const capsule = WM_STYLE === 'capsule';
-  capEl.style.display = capsule ? 'flex' : 'none';
-  $('wm-prev-tile').style.display = capsule ? 'none' : 'block';
-  $('wm-preview').classList.toggle('tile-mode', !capsule);
-  $('wm-prev-note').textContent = capsule
-    ? '胶囊：底部居中磨砂条，点击跳转感谢页'
-    : '斜纹平铺：半透明文字覆盖全屏（防截图分享）';
-  // 水印总开关关闭时预览置灰
-  $('wm-preview').classList.toggle('disabled', !$('set-wm-on').checked);
+function getPf(id) {
+  return PF_LIST.find((p) => p.id === Number(id)) || null;
 }
-function setWmStyle(s) {
-  WM_STYLE = s === 'tile' ? 'tile' : 'capsule';
-  $('wm-style-capsule').classList.toggle('on', WM_STYLE === 'capsule');
-  $('wm-style-tile').classList.toggle('on', WM_STYLE === 'tile');
-  updateWmPreview();
-}
-$('wm-style-capsule').addEventListener('click', () => setWmStyle('capsule'));
-$('wm-style-tile').addEventListener('click', () => setWmStyle('tile'));
-$('set-wm-text').addEventListener('input', updateWmPreview);
-$('set-wm-name').addEventListener('input', updateWmPreview);
-$('set-wm-on').addEventListener('change', updateWmPreview);
 
-async function loadSettingsAndFiles() {
+async function loadPortfolios() {
   try {
-    const d = await API.req('/api/config?fresh=1');
+    const d = await API.req('/api/portfolios');
     if (!d.ok) return;
-    const c = d.config;
-    // 设置
-    $('set-title').value = c.title || '';
-    $('set-wm-on').checked = c.wm_enabled;
-    setWmStyle(c.wm_style);
-    $('set-wm-text').value = c.wm_text || '';
-    $('set-wm-name').value = c.wm_name || '';
-    $('set-phone-on').checked = c.phone_enabled;
-    $('set-phone').value = c.phone || '';
-    $('set-qr-on').checked = c.qr_enabled;
-    $('set-wxid').value = c.wx_id || '';
-    updateWmPreview();
-    // 二维码预览
-    if (d.qr_version > 0) {
-      $('qr-preview').src = '/api/file/qrcode?v=' + d.qr_version;
-      $('qr-preview').style.display = 'block';
-      $('qr-empty').style.display = 'none';
-    } else {
-      $('qr-preview').style.display = 'none';
-      $('qr-empty').style.display = 'flex';
+    PF_LIST = d.portfolios || [];
+    FILE_TOKEN = d.file_token || '';
+    if (!PF_LIST.length) {
+      // 全新站点：自动创建第一个作品集
+      try {
+        const created = await API.req('/api/portfolios', { method: 'POST', json: { title: '我的第一个作品集' } });
+        if (created.ok) {
+          const d2 = await API.req('/api/portfolios');
+          if (d2.ok) {
+            PF_LIST = d2.portfolios || [];
+            FILE_TOKEN = d2.file_token || FILE_TOKEN;
+          }
+        }
+      } catch (e) {}
     }
+    if (viewMode === 'detail' && curPfId != null) {
+      fillDetail();
+    } else {
+      viewMode = 'list';
+      curPfId = null;
+      $('pf-detail').style.display = 'none';
+      $('pf-list-view').style.display = 'block';
+      renderPfList();
+    }
+    renderPfRank();
+    renderVisitors();
   } catch (e) {}
 }
 
-// 三个分组的保存按钮共用一个提交函数
-async function saveSettingsGroup(btnId, msgId) {
-  const btn = $(btnId);
-  btn.disabled = true; btn.textContent = '保存中…';
-  try {
-    const d = await API.req('/api/config', {
-      method: 'PUT',
-      json: {
-        title: $('set-title').value,
-        wm_enabled: $('set-wm-on').checked,
-        wm_text: $('set-wm-text').value,
-        wm_name: $('set-wm-name').value,
-        wm_style: WM_STYLE,
-        phone_enabled: $('set-phone-on').checked,
-        phone: $('set-phone').value,
-        qr_enabled: $('set-qr-on').checked,
-        wx_id: $('set-wxid').value,
-      },
-    });
-    $(msgId).textContent = d.ok ? '已保存 ✓ 前台立即生效' : d.error || '保存失败';
-    // 同步其他分组的提示
-    ['settings-msg', 'settings-msg2', 'settings-msg3'].forEach((id) => {
-      if (id !== msgId && d.ok) $(id).textContent = '';
-    });
-    if (d.ok) {
-      // 清除前台边缘缓存，确保配置立即生效
-      try { await fetch('/api/config?fresh=1', { cache: 'no-store' }); } catch (e) {}
-    }
-  } catch (e) { $(msgId).textContent = '保存失败'; }
-  btn.disabled = false; btn.textContent = '保存设置';
-  setTimeout(() => ($(msgId).textContent = ''), 2500);
+// 作品集缩略图 URL（带管理端令牌，受密码保护的作品集后台也能预览）
+function pfThumbUrl(p) {
+  if (!p.pages || !p.pages.count || !p.pages.version) return null;
+  const slug = p.r2_prefix === '' ? 'default' : p.slug;
+  let u = '/api/file/' + encodeURIComponent(slug) + '/page/v' + p.pages.version + '/1.webp';
+  if (FILE_TOKEN) u += '?ft=' + encodeURIComponent(FILE_TOKEN);
+  return u;
 }
-$('save-settings').addEventListener('click', () => saveSettingsGroup('save-settings', 'settings-msg'));
-$('save-settings2').addEventListener('click', () => saveSettingsGroup('save-settings2', 'settings-msg2'));
-$('save-settings3').addEventListener('click', () => saveSettingsGroup('save-settings3', 'settings-msg3'));
 
-// ---------- 文件信息（已合并到 loadSettingsAndFiles） ----------
-
-// ---------- PDF 上传（流水线模式：渲染一页即上传，3路并发） ----------
-function setP(barEl, pct) {
-  barEl.style.display = 'block';
-  barEl.firstElementChild.style.width = Math.round(pct) + '%';
-}
-$('pdf-pick').addEventListener('click', () => $('pdf-file').click());
-$('pdf-file').addEventListener('change', () => {
-  const f = $('pdf-file').files[0];
-  if (f) $('pdf-upload-status').textContent = '已选择：' + f.name + '（' + (f.size / 1048576).toFixed(1) + 'MB），点击「上传替换」开始';
-});
-$('pdf-upload').addEventListener('click', async () => {
-  const f = $('pdf-file').files[0];
-  const status = $('pdf-upload-status');
-  const curPf = getPf(curPfId);
-  if (!curPf) { status.textContent = '请先在上方选择要上传到的作品集'; return; }
-  if (!f) { status.textContent = '请先选择 PDF 文件'; return; }
-  const btn = $('pdf-upload');
-  const bar = $('pdf-progress');
-  btn.disabled = true; btn.textContent = '处理中…';
-  try {
-    // 1. 解析 PDF
-    setP(bar, 2); status.textContent = '正在解析 PDF…';
-    await ensurePdfjs();
-    const buf = await f.arrayBuffer();
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
-    const doc = await pdfjsLib.getDocument({ data: buf }).promise;
-    const n = doc.numPages;
-    if (n < 1) throw new Error('PDF 里没有页面');
-    if (n > 500) throw new Error('最多支持 500 页的 PDF');
-
-    // 2. 预约版本号
-    setP(bar, 4); status.textContent = '正在准备上传…';
-    const beginFd = new FormData();
-    beginFd.append('type', 'pages_begin');
-    beginFd.append('portfolio_id', String(curPfId));
-    const begin = await postForm(beginFd);
-    const version = begin.version;
-
-    // 加载 WebP 编码器（WASM，首次约 200ms）
-    const webpEncode = await ensureWebpEncoder();
-
-    // 3. 流水线：渲染一页 → 立即上传 → 继续渲染下一页
-    //    3路并发上传，内存中最多只持有 3 个 blob
-    const CONCURRENCY = 3;
-    const dims = new Array(n);
-    let rendered = 0, uploaded = 0;
-    const pending = new Set();
-
-    const updateProgress = () => {
-      const pct = 5 + (rendered / n) * 35 + (uploaded / n) * 55;
-      setP(bar, Math.min(95, pct));
-      const tail = rendered < n ? ' · 渲染 ' + rendered + '/' + n : '';
-      status.textContent = '正在上传 ' + uploaded + '/' + n + ' 页' + tail;
-    };
-
-    for (let i = 1; i <= n; i++) {
-      // 并发数达上限时，等待最快的那个上传完成
-      while (pending.size >= CONCURRENCY) {
-        await Promise.race(pending);
-        await new Promise((r) => setTimeout(r, 0));
-      }
-
-      // 渲染第 i 页
-      const page = await doc.getPage(i);
-      const vp1 = page.getViewport({ scale: 1 });
-      let scale = Math.min(1280 / vp1.width, Math.sqrt(8e6 / (vp1.width * vp1.height)), 4);
-      if (scale < 0.05) scale = 0.05;
-      const vp = page.getViewport({ scale });
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.floor(vp.width);
-      canvas.height = Math.floor(vp.height);
-      const ctx = canvas.getContext('2d');
-      await page.render({ canvasContext: ctx, viewport: vp }).promise;
-      // 编码图片：优先 WebP（jSquash libwebp WASM, 质量82视觉无损），降级为 JPEG
-      let blob, fileExt;
-      if (webpEncode) {
-        try {
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const webpBuf = await webpEncode(imageData, { quality: 82 });
-          blob = new Blob([webpBuf], { type: 'image/webp' });
-          fileExt = '.webp';
-        } catch (e) {
-          console.warn('WebP 编码失败，降级 JPEG', e);
-        }
-      }
-      if (!blob || blob.size === 0) {
-        blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.82));
-        fileExt = '.jpg';
-      }
-      if (!blob || blob.size === 0) throw new Error('第 ' + i + ' 页渲染失败');
-      if (blob.size > 8 * 1024 * 1024) throw new Error('第 ' + i + ' 页图片过大');
-      dims[i - 1] = { w: canvas.width, h: canvas.height };
-      canvas.width = 0; canvas.height = 0;
-      rendered++;
-
-      // 立即开始上传（不等待）
-      const idx = i;
-      const uploadP = (async () => {
-        const fd = new FormData();
-        fd.append('type', 'page_image');
-        fd.append('portfolio_id', String(curPfId));
-        fd.append('version', String(version));
-        fd.append('index', String(idx));
-        fd.append('file', blob, idx + fileExt);
-        await postForm(fd);
-        uploaded++;
-        updateProgress();
-      })();
-      uploadP.finally(() => pending.delete(uploadP));
-      pending.add(uploadP);
-
-      updateProgress();
-      await new Promise((r) => setTimeout(r, 0));
-    }
-
-    // 等待所有上传完成
-    await Promise.all(pending);
-    setP(bar, 95); status.textContent = '正在完成 ' + uploaded + '/' + n + ' 页…';
-
-    // 4. 上传 manifest
-    setP(bar, 97); status.textContent = '正在完成…';
-    const fd = new FormData();
-    fd.append('type', 'pages_manifest');
-    fd.append('portfolio_id', String(curPfId));
-    fd.append('manifest', JSON.stringify({ version, count: n, pages: dims }));
-    await postForm(fd);
-
-    setP(bar, 100);
-    status.textContent = '上传完成 ✓ 「' + curPf.title + '」共 ' + n + ' 页，前台已自动更新';
-    pgState = null;
-    await loadPortfolios();
-    $('pdf-file').value = '';
-  } catch (e) {
-    status.textContent = '上传失败：' + (e.message || e);
+function renderPfList() {
+  const box = $('pf-rows');
+  if (!PF_LIST.length) {
+    $('pf-count').textContent = '';
+    box.innerHTML = '<div class="loading-inline">暂无作品集，点击右上角「新建作品集」创建</div>';
+    return;
   }
-  setTimeout(() => { bar.style.display = 'none'; }, 2000);
-  btn.disabled = false; btn.textContent = '上传替换';
-});
-
-// ---------- 删除当前作品集 ----------
-$('pdf-delete').addEventListener('click', async () => {
-  const p = getPf(curPfId);
-  if (!p) { $('delete-msg').style.color = '#e02020'; $('delete-msg').textContent = '请先选择作品集'; return; }
-  if (!confirm('确定删除作品集「' + p.title + '」吗？\n\n所有页面图片将被永久清除，此操作不可撤销。\n站点设置（标题、联系方式、二维码）不受影响。')) return;
-  const btn = $('pdf-delete');
-  btn.disabled = true; btn.textContent = '删除中…';
-  $('delete-msg').textContent = '';
-  try {
-    const d = await API.req('/api/portfolios?id=' + p.id, { method: 'DELETE' });
-    if (d.ok) {
-      $('delete-msg').textContent = '已删除 ✓';
-      $('delete-msg').style.color = '#34c759';
-      pgState = null;
-      await loadPortfolios();
-      setTimeout(() => { $('delete-msg').textContent = ''; }, 3000);
-    } else {
-      $('delete-msg').textContent = d.error || '删除失败';
-      $('delete-msg').style.color = '#e02020';
+  $('pf-count').textContent = PF_LIST.length + ' / 20 个';
+  box.innerHTML = '';
+  PF_LIST.forEach((p) => {
+    const thumb = pfThumbUrl(p);
+    const badges = [];
+    if (p.password_protected) badges.push('<span class="badge lock">🔒 密码</span>');
+    if (p.preview_count > 0) badges.push('<span class="badge ok">预览 ' + p.preview_count + ' 页</span>');
+    if (!p.is_published) badges.push('<span class="badge off">未发布</span>');
+    if (p.expire_at > 0) {
+      const days = Math.ceil((p.expire_at - Date.now()) / 86400000);
+      if (days < 0) badges.push('<span class="badge limit">已过期</span>');
+      else if (days <= 7) badges.push('<span class="badge limit">' + days + ' 天后到期</span>');
     }
-  } catch (e) {
-    $('delete-msg').textContent = '网络错误，请重试';
-    $('delete-msg').style.color = '#e02020';
-  }
-  btn.disabled = false; btn.textContent = '删除当前作品集';
-});
-
-// ---------- 二维码上传 ----------
-function uploadQr(form) {
-  return new Promise((resolve) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/upload');
-    xhr.setRequestHeader('Authorization', 'Bearer ' + API.token);
-    xhr.upload.addEventListener('progress', (e) => {
-      if (e.lengthComputable) setP($('qr-progress'), (e.loaded / e.total) * 100);
-    });
-    xhr.addEventListener('load', () => {
-      let d = {};
-      try { d = JSON.parse(xhr.responseText); } catch (e) {}
-      if (xhr.status === 401) { showLogin(); resolve(false); return; }
-      $('qr-upload-status').textContent = d.ok ? '上传成功 ✓' : d.error || '上传失败';
-      if (d.ok) loadSettingsAndFiles();
-      resolve(d.ok);
-    });
-    xhr.addEventListener('error', () => {
-      $('qr-upload-status').textContent = '上传失败，请检查网络后重试';
-      resolve(false);
-    });
-    xhr.send(form);
+    const row = document.createElement('div');
+    row.className = 'pf-row';
+    row.innerHTML =
+      '<div class="pf-thumb">' +
+      (thumb ? '<img loading="lazy" src="' + thumb + '" alt="">' : '<div class="empty">无内容</div>') +
+      '</div>' +
+      '<div class="pf-row-main">' +
+      '<div class="pf-row-title"><span class="t" title="' + esc(p.title) + '">' + esc(p.title) + '</span>' + badges.join('') + '</div>' +
+      '<div class="pf-row-meta">' +
+      '<span class="u">/' + esc(p.slug) + '</span>' +
+      '<span>' + (p.page_count || 0) + ' 页</span>' +
+      '<span>' + (p.views || 0) + ' 次访问</span>' +
+      '</div>' +
+      '</div>' +
+      '<div class="pf-row-ops">' +
+      '<button class="btn-mini" data-op="view">查看</button>' +
+      '<button class="btn-mini" data-op="manage">管理</button>' +
+      '</div>';
+    row.addEventListener('click', () => openDetail(p.id));
+    const bv = row.querySelector('[data-op="view"]');
+    const bm = row.querySelector('[data-op="manage"]');
+    bv.addEventListener('click', (e) => { e.stopPropagation(); window.open('/' + encodeURIComponent(p.slug), '_blank'); });
+    bm.addEventListener('click', (e) => { e.stopPropagation(); openDetail(p.id); });
+    box.appendChild(row);
   });
 }
-$('qr-pick').addEventListener('click', () => $('qr-file').click());
-$('qr-file').addEventListener('change', () => {
-  const f = $('qr-file').files[0];
-  if (f) $('qr-upload-status').textContent = '已选择：' + f.name;
+
+// ---------- 详情视图 ----------
+function openDetail(id) {
+  const p = getPf(id);
+  if (!p) return;
+  curPfId = p.id;
+  viewMode = 'detail';
+  pgState = null;
+  $('pf-list-view').style.display = 'none';
+  $('pf-detail').style.display = 'block';
+  fillDetail();
+  window.scrollTo({ top: 0 });
+}
+function closeDetail() {
+  curPfId = null;
+  viewMode = 'list';
+  pgState = null;
+  $('pf-detail').style.display = 'none';
+  $('pf-list-view').style.display = 'block';
+  renderPfList();
+}
+$('pf-back').addEventListener('click', closeDetail);
+
+function fmtDateInput(ts) {
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function fmtDateTime(ts) {
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function fillDetail() {
+  const p = getPf(curPfId);
+  if (!p) { closeDetail(); return; }
+
+  // 头部信息
+  const thumb = pfThumbUrl(p);
+  $('pf-dthumb').innerHTML = thumb
+    ? '<img src="' + thumb + '" alt="">'
+    : '<div class="empty">未上传内容</div>';
+  $('pf-dtitle').textContent = p.title;
+  const metaBits = ['<span class="u">/' + esc(p.slug) + '</span>', '<span>' + (p.page_count || 0) + ' 页</span>', '<span>' + (p.views || 0) + ' 次访问</span>'];
+  if (p.pages && p.pages.version) metaBits.push('<span>v' + p.pages.version + '</span>');
+  if (!p.is_published) metaBits.push('<span class="badge off">未发布</span>');
+  if (p.password_protected) metaBits.push('<span class="badge lock">🔒 密码' + (p.preview_count > 0 ? ' · 预览 ' + p.preview_count + ' 页' : '') + '</span>');
+  if (p.expire_at > 0) {
+    const left = p.expire_at - Date.now();
+    metaBits.push(left < 0
+      ? '<span class="badge limit">已于 ' + fmtDateInput(p.expire_at) + ' 过期</span>'
+      : '<span class="badge ok">有效至 ' + fmtDateInput(p.expire_at) + '</span>');
+  }
+  if (p.updated_at) metaBits.push('<span>更新于 ' + fmtDateInput(p.updated_at) + '</span>');
+  $('pf-dmeta').innerHTML = metaBits.join('');
+
+  // 基本信息
+  $('db-title').value = p.title;
+  $('db-slug').value = p.slug;
+  $('db-published').checked = p.is_published;
+  updateDbUrl();
+  $('db-msg').textContent = '';
+
+  // 访问控制
+  $('ac-pass').value = '';
+  $('ac-pass-desc').textContent = p.password_protected
+    ? '已设置密码。留空保持不变，输入新值替换，或勾选下方清除'
+    : '设置后访客需输入密码才能查看全部内容';
+  $('ac-clear-row').style.display = p.password_protected ? 'flex' : 'none';
+  $('ac-clear').checked = false;
+  $('ac-preview').value = p.preview_count > 0 ? p.preview_count : '';
+  $('ac-limit').value = p.visit_limit > 0 ? p.visit_limit : '';
+  $('ac-views-tag').textContent = '已访问 ' + (p.views || 0) + ' 次';
+  if (p.expire_at > 0) {
+    $('ac-perm').checked = false;
+    $('ac-date').value = fmtDateInput(p.expire_at);
+    $('ac-expire-row').style.display = 'flex';
+  } else {
+    $('ac-perm').checked = true;
+    $('ac-date').value = '';
+    $('ac-expire-row').style.display = 'none';
+  }
+  $('ac-msg').textContent = '';
+
+  // 上传信息
+  $('pdf-info').textContent = p.pages && p.pages.count
+    ? '当前版本 v' + p.pages.version + ' · 共 ' + p.pages.count + ' 页'
+    : '尚未上传内容，请选择 PDF 文件上传';
+  $('pdf-status').textContent = '';
+  $('pdf-upload').textContent = p.pages && p.pages.count ? '上传替换' : '上传作品集';
+  $('del-msg').textContent = '';
+
+  initPages();
+}
+
+function updateDbUrl() {
+  const v = $('db-slug').value.trim();
+  $('db-url').textContent = v ? '/' + v : '/（自动生成）';
+}
+$('db-slug').addEventListener('input', updateDbUrl);
+
+$('pf-d-view').addEventListener('click', () => {
+  const p = getPf(curPfId);
+  if (p) window.open('/' + encodeURIComponent(p.slug), '_blank');
 });
-$('qr-upload').addEventListener('click', async () => {
-  const f = $('qr-file').files[0];
-  if (!f) { $('qr-upload-status').textContent = '请先选择图片'; return; }
-  const btn = $('qr-upload');
-  btn.disabled = true; btn.textContent = '上传中…';
-  const form = new FormData();
-  form.append('type', 'qrcode');
-  form.append('file', f);
-  await uploadQr(form);
-  btn.disabled = false; btn.textContent = '上传替换';
-  $('qr-file').value = '';
-  setTimeout(() => { $('qr-progress').style.display = 'none'; }, 1500);
+$('pf-d-copy').addEventListener('click', async (e) => {
+  const p = getPf(curPfId);
+  if (!p) return;
+  const url = location.origin + '/' + p.slug;
+  const btn = e.currentTarget;
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+  btn.textContent = '已复制 ✓';
+  setTimeout(() => (btn.textContent = '复制链接'), 1500);
 });
 
-// ---------- 页面管理 ----------
+// 保存基本信息
+$('db-save').addEventListener('click', async () => {
+  const p = getPf(curPfId);
+  if (!p) return;
+  const title = $('db-title').value.trim();
+  if (!title) { $('db-msg').className = 'bad-msg'; $('db-msg').textContent = '请填写作品集名称'; return; }
+  const btn = $('db-save');
+  btn.disabled = true; btn.textContent = '保存中…';
+  try {
+    const d = await API.req('/api/portfolios', {
+      method: 'PUT',
+      json: { id: p.id, title, slug: $('db-slug').value.trim(), is_published: $('db-published').checked },
+    });
+    if (d.ok) {
+      $('db-msg').className = 'ok-msg';
+      $('db-msg').textContent = '已保存 ✓';
+      await loadPortfolios();
+      setTimeout(() => ($('db-msg').textContent = ''), 2500);
+    } else {
+      $('db-msg').className = 'bad-msg';
+      $('db-msg').textContent = d.error || '保存失败';
+    }
+  } catch (e) {
+    $('db-msg').className = 'bad-msg';
+    $('db-msg').textContent = '网络错误，请重试';
+  }
+  btn.disabled = false; btn.textContent = '保存基本信息';
+});
+
+// 保存访问控制（密码 / 预览页数 / 访问上限 / 有效期）
+$('ac-perm').addEventListener('change', () => {
+  $('ac-expire-row').style.display = $('ac-perm').checked ? 'none' : 'flex';
+});
+$('ac-save').addEventListener('click', async () => {
+  const p = getPf(curPfId);
+  if (!p) return;
+  let expireAt = 0;
+  if (!$('ac-perm').checked) {
+    const dv = $('ac-date').value;
+    if (!dv) { $('ac-msg').className = 'bad-msg'; $('ac-msg').textContent = '请选择失效日期'; return; }
+    expireAt = new Date(dv + 'T23:59:59').getTime();
+  }
+  const body = {
+    id: p.id,
+    preview_count: Math.max(0, parseInt($('ac-preview').value, 10) || 0),
+    visit_limit: Math.max(0, parseInt($('ac-limit').value, 10) || 0),
+    expire_at: expireAt,
+  };
+  if ($('ac-pass').value) body.password = $('ac-pass').value;
+  if ($('ac-clear').checked) body.clear_password = true;
+  const btn = $('ac-save');
+  btn.disabled = true; btn.textContent = '保存中…';
+  try {
+    const d = await API.req('/api/portfolios', { method: 'PUT', json: body });
+    if (d.ok) {
+      $('ac-msg').className = 'ok-msg';
+      $('ac-msg').textContent = '已保存 ✓ 立即生效';
+      await loadPortfolios();
+      setTimeout(() => ($('ac-msg').textContent = ''), 2500);
+    } else {
+      $('ac-msg').className = 'bad-msg';
+      $('ac-msg').textContent = d.error || '保存失败';
+    }
+  } catch (e) {
+    $('ac-msg').className = 'bad-msg';
+    $('ac-msg').textContent = '网络错误，请重试';
+  }
+  btn.disabled = false; btn.textContent = '保存访问控制';
+});
+
+// ---------- 页面管理（已并入作品集详情） ----------
 let pgState = null;
 let pgVersion = 0;
-let pgSlug = 'default'; // 当前页面管理对应的作品集 slug
 let pgPfId = null;
-async function initPageManager() {
+
+async function initPages() {
   const p = getPf(curPfId);
-  if (!p) { $('pg-loading').textContent = '请先在上方选择作品集'; $('pg-loading').style.display = 'block'; return; }
+  const loading = $('pg-loading');
+  const grid = $('pg-grid');
+  if (!p) return;
+  if (!p.pages || !p.pages.count) {
+    grid.innerHTML = '';
+    loading.style.display = 'block';
+    loading.textContent = '「' + p.title + '」尚未上传 PDF，请先在下方「上传 / 替换内容」上传';
+    return;
+  }
   if (pgState && pgPfId === curPfId) return;
-  $('pg-loading').style.display = 'block';
-  $('pg-loading').textContent = '正在加载页面缩略图…';
+  loading.style.display = 'block';
+  loading.textContent = '正在加载页面缩略图…';
+  grid.innerHTML = '';
   try {
     const d = await API.req('/api/config?fresh=1&slug=' + encodeURIComponent(p.slug));
     if (!d.ok || !d.manifest || !d.manifest.count) {
-      $('pg-loading').textContent = '「' + p.title + '」尚未上传 PDF，请先在「文件管理」上传';
+      loading.textContent = '页面数据加载失败，请刷新重试';
       return;
     }
+    if (d.file_token) FILE_TOKEN = d.file_token;
     pgVersion = d.manifest.version;
-    pgSlug = p.slug;
     pgPfId = curPfId;
     const cfgPages = d.config.pages;
     const all = Array.from({ length: d.manifest.count }, (_, i) => i + 1);
@@ -1571,19 +1565,23 @@ async function initPageManager() {
     pgState = all.map((no) => ({ no, on: onSet ? onSet.has(no) : true }));
     renderPgGrid();
   } catch (e) {
-    $('pg-loading').textContent = '加载失败，请刷新重试';
+    loading.textContent = '加载失败，请刷新重试';
   }
 }
 function renderPgGrid() {
   $('pg-loading').style.display = 'none';
   const grid = $('pg-grid');
   grid.innerHTML = '';
+  const p = getPf(curPfId);
+  const slug = p ? (p.r2_prefix === '' ? 'default' : p.slug) : 'default';
   pgState.forEach((item, idx) => {
+    let u = '/api/file/' + encodeURIComponent(slug) + '/page/v' + pgVersion + '/' + item.no + '.webp';
+    if (FILE_TOKEN) u += '?ft=' + encodeURIComponent(FILE_TOKEN);
     const el = document.createElement('div');
     el.className = 'pg-item' + (item.on ? '' : ' off');
     el.dataset.idx = idx;
     el.innerHTML =
-      '<div class="thumb"><img loading="lazy" decoding="async" src="/api/file/' + encodeURIComponent(pgSlug) + '/page/v' + pgVersion + '/' + item.no + '.webp" draggable="false"><span class="no">' + item.no + '</span></div>' +
+      '<div class="thumb"><img loading="lazy" decoding="async" src="' + u + '" draggable="false"><span class="no">' + item.no + '</span></div>' +
       '<div class="ops">' +
       '<button data-op="off" title="显示/隐藏">' + (item.on ? '👁' : '🚫') + '</button>' +
       '<span>' +
@@ -1637,19 +1635,544 @@ $('pg-save').addEventListener('click', async () => {
   setTimeout(() => ($('pg-msg').textContent = ''), 3000);
 });
 
-// ---------- 统计 ----------
-let LAST_STATS = null; // 最近一次统计结果（作品集列表加载完成后可回填排行标题）
-
-function renderPfRank() {
-  if (!LAST_STATS) return;
-  const titleMap = {};
-  PF_LIST.forEach((x) => { titleMap[x.slug] = x.title; });
-  const byPf = (LAST_STATS.byPortfolio || []).map((x) => ({
-    k: titleMap[x.k] || (x.k === '(未记录)' ? '历史访问（旧版）' : '/' + x.k),
-    c: x.c,
-  }));
-  rankRender($('rank-portfolio'), byPf);
+// ---------- 上传 / 替换内容（流水线模式：渲染一页即上传，3路并发） ----------
+function setP(barEl, pct) {
+  barEl.style.display = 'block';
+  barEl.firstElementChild.style.width = Math.round(pct) + '%';
 }
+$('pdf-pick').addEventListener('click', () => $('pdf-file').click());
+$('pdf-file').addEventListener('change', () => {
+  const f = $('pdf-file').files[0];
+  if (f) $('pdf-status').textContent = '已选择：' + f.name + '（' + (f.size / 1048576).toFixed(1) + 'MB），点击「上传」开始';
+});
+$('pdf-upload').addEventListener('click', async () => {
+  const f = $('pdf-file').files[0];
+  const status = $('pdf-status');
+  const curPf = getPf(curPfId);
+  if (!curPf) { status.textContent = '请先选择作品集'; return; }
+  if (!f) { status.textContent = '请先选择 PDF 文件'; return; }
+  const btn = $('pdf-upload');
+  const bar = $('pdf-progress');
+  btn.disabled = true; btn.textContent = '处理中…';
+  try {
+    // 1. 解析 PDF
+    setP(bar, 2); status.textContent = '正在解析 PDF…';
+    await ensurePdfjs();
+    const buf = await f.arrayBuffer();
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+    const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+    const n = doc.numPages;
+    if (n < 1) throw new Error('PDF 里没有页面');
+    if (n > 500) throw new Error('最多支持 500 页的 PDF');
+
+    // 2. 预约版本号
+    setP(bar, 4); status.textContent = '正在准备上传…';
+    const beginFd = new FormData();
+    beginFd.append('type', 'pages_begin');
+    beginFd.append('portfolio_id', String(curPfId));
+    const begin = await postForm(beginFd);
+    const version = begin.version;
+
+    // 加载 WebP 编码器（WASM，首次约 200ms）
+    const webpEncode = await ensureWebpEncoder();
+
+    // 3. 流水线：渲染一页 → 立即上传 → 继续渲染下一页
+    const CONCURRENCY = 3;
+    const dims = new Array(n);
+    let rendered = 0, uploaded = 0;
+    const pending = new Set();
+
+    const updateProgress = () => {
+      const pct = 5 + (rendered / n) * 35 + (uploaded / n) * 55;
+      setP(bar, Math.min(95, pct));
+      const tail = rendered < n ? ' · 渲染 ' + rendered + '/' + n : '';
+      status.textContent = '正在上传 ' + uploaded + '/' + n + ' 页' + tail;
+    };
+
+    for (let i = 1; i <= n; i++) {
+      while (pending.size >= CONCURRENCY) {
+        await Promise.race(pending);
+        await new Promise((r) => setTimeout(r, 0));
+      }
+
+      const page = await doc.getPage(i);
+      const vp1 = page.getViewport({ scale: 1 });
+      let scale = Math.min(1280 / vp1.width, Math.sqrt(8e6 / (vp1.width * vp1.height)), 4);
+      if (scale < 0.05) scale = 0.05;
+      const vp = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.floor(vp.width);
+      canvas.height = Math.floor(vp.height);
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      let blob, fileExt;
+      if (webpEncode) {
+        try {
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const webpBuf = await webpEncode(imageData, { quality: 82 });
+          blob = new Blob([webpBuf], { type: 'image/webp' });
+          fileExt = '.webp';
+        } catch (e) {
+          console.warn('WebP 编码失败，降级 JPEG', e);
+        }
+      }
+      if (!blob || blob.size === 0) {
+        blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.82));
+        fileExt = '.jpg';
+      }
+      if (!blob || blob.size === 0) throw new Error('第 ' + i + ' 页渲染失败');
+      if (blob.size > 8 * 1024 * 1024) throw new Error('第 ' + i + ' 页图片过大');
+      dims[i - 1] = { w: canvas.width, h: canvas.height };
+      canvas.width = 0; canvas.height = 0;
+      rendered++;
+
+      const idx = i;
+      const uploadP = (async () => {
+        const fd = new FormData();
+        fd.append('type', 'page_image');
+        fd.append('portfolio_id', String(curPfId));
+        fd.append('version', String(version));
+        fd.append('index', String(idx));
+        fd.append('file', blob, idx + fileExt);
+        await postForm(fd);
+        uploaded++;
+        updateProgress();
+      })();
+      uploadP.finally(() => pending.delete(uploadP));
+      pending.add(uploadP);
+
+      updateProgress();
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    await Promise.all(pending);
+    setP(bar, 95); status.textContent = '正在完成 ' + uploaded + '/' + n + ' 页…';
+
+    // 4. 上传 manifest
+    setP(bar, 97); status.textContent = '正在完成…';
+    const fd = new FormData();
+    fd.append('type', 'pages_manifest');
+    fd.append('portfolio_id', String(curPfId));
+    fd.append('manifest', JSON.stringify({ version, count: n, pages: dims }));
+    await postForm(fd);
+
+    setP(bar, 100);
+    status.textContent = '上传完成 ✓ 「' + curPf.title + '」共 ' + n + ' 页，前台已自动更新';
+    pgState = null;
+    $('pdf-file').value = '';
+    await loadPortfolios();
+  } catch (e) {
+    status.textContent = '上传失败：' + (e.message || e);
+  }
+  setTimeout(() => { bar.style.display = 'none'; }, 2000);
+  btn.disabled = false;
+  btn.textContent = getPf(curPfId) && getPf(curPfId).pages && getPf(curPfId).pages.count ? '上传替换' : '上传作品集';
+});
+
+// ---------- 删除作品集 ----------
+$('pf-del').addEventListener('click', async () => {
+  const p = getPf(curPfId);
+  if (!p) { $('del-msg').className = 'bad-msg'; $('del-msg').textContent = '请先选择作品集'; return; }
+  if (!confirm('确定删除作品集「' + p.title + '」吗？\n\n所有页面图片将被永久清除，此操作不可撤销。\n站点设置与其他作品集不受影响。')) return;
+  const btn = $('pf-del');
+  btn.disabled = true; btn.textContent = '删除中…';
+  $('del-msg').textContent = '';
+  try {
+    const d = await API.req('/api/portfolios?id=' + p.id, { method: 'DELETE' });
+    if (d.ok) {
+      $('del-msg').className = 'ok-msg';
+      $('del-msg').textContent = '已删除 ✓';
+      pgState = null;
+      await loadPortfolios();
+      closeDetail();
+    } else {
+      $('del-msg').className = 'bad-msg';
+      $('del-msg').textContent = d.error || '删除失败';
+    }
+  } catch (e) {
+    $('del-msg').className = 'bad-msg';
+    $('del-msg').textContent = '网络错误，请重试';
+  }
+  btn.disabled = false; btn.textContent = '删除该作品集';
+});
+
+// ---------- 新建作品集弹窗 ----------
+function updatePfmUrl() {
+  const v = $('pfm-slug').value.trim();
+  $('pfm-url').textContent = v ? '/' + v : '/（自动生成）';
+}
+$('pfm-slug').addEventListener('input', updatePfmUrl);
+$('pf-new').addEventListener('click', () => {
+  $('pfm-title').value = '';
+  $('pfm-slug').value = '';
+  $('pfm-password').value = '';
+  updatePfmUrl();
+  $('pf-modal').classList.add('open');
+  setTimeout(() => $('pfm-title').focus(), 50);
+});
+$('pfm-cancel').addEventListener('click', () => $('pf-modal').classList.remove('open'));
+$('pf-modal').addEventListener('click', (e) => {
+  if (e.target === $('pf-modal')) $('pf-modal').classList.remove('open');
+});
+$('pfm-save').addEventListener('click', async () => {
+  const btn = $('pfm-save');
+  const title = $('pfm-title').value.trim();
+  if (!title) { $('pfm-title').focus(); return; }
+  const body = {
+    title,
+    slug: $('pfm-slug').value.trim(),
+    password: $('pfm-password').value || undefined,
+  };
+  btn.disabled = true; btn.textContent = '创建中…';
+  try {
+    const d = await API.req('/api/portfolios', { method: 'POST', json: body });
+    if (d.ok) {
+      $('pf-modal').classList.remove('open');
+      await loadPortfolios();
+      openDetail(d.id);
+    } else {
+      alert(d.error || '创建失败');
+    }
+  } catch (e) {
+    alert('网络错误，请重试');
+  }
+  btn.disabled = false; btn.textContent = '创 建';
+});
+
+// ==================== 站点设置 ====================
+const THEMES = [
+  { id: 'green', name: '清新绿', color: '#07C160' },
+  { id: 'blue', name: '商务蓝', color: '#0071E3' },
+  { id: 'purple', name: '典雅紫', color: '#7C5CFF' },
+  { id: 'orange', name: '活力橙', color: '#F97316' },
+  { id: 'rose', name: '浪漫粉', color: '#F43F5E' },
+  { id: 'dark', name: '极简黑', color: '#1D1D1F' },
+];
+let THEME_CUR = 'green';
+let FAV_VERSION = 0;
+let QR_VERSION = 0;
+
+async function loadSite() {
+  try {
+    const d = await API.req('/api/config?fresh=1');
+    if (!d.ok) return;
+    const c = d.config;
+    // 系统信息
+    $('set-title').value = c.site_title || '';
+    $('set-desc').value = c.description || '';
+    updateFavPreview();
+    // 主题
+    renderThemeGrid(c.theme);
+    // 水印
+    $('set-wm-on').checked = c.wm_enabled;
+    $('set-wm-dyn').checked = c.wm_dynamic;
+    setWmStyle(c.wm_style);
+    $('set-wm-text').value = c.wm_text || '';
+    wmPreview();
+    // 联系方式
+    $('set-phone-on').checked = c.phone_enabled;
+    $('set-phone').value = c.phone || '';
+    $('set-qr-on').checked = c.qr_enabled;
+    $('set-wxid').value = c.wx_id || '';
+    // 二维码
+    QR_VERSION = d.qr_version || 0;
+    updateQrPreview();
+    // 邮件
+    const e = d.email || {};
+    $('set-email-on').checked = e.enabled === true;
+    $('set-email-to').value = e.to || '';
+    $('set-email-from').value = e.from || '';
+    $('set-email-key').value = e.api_key || '';
+    $('set-email-key').placeholder = e.api_key ? '已保存（留空保持不变）' : 're_xxxxxxxx';
+  } catch (e) {}
+}
+
+// ---- 系统信息 ----
+$('set-title').addEventListener('input', updateFavPreview);
+$('save-site').addEventListener('click', async () => {
+  const btn = $('save-site');
+  btn.disabled = true; btn.textContent = '保存中…';
+  try {
+    const d = await API.req('/api/config', {
+      method: 'PUT',
+      json: { title: $('set-title').value, description: $('set-desc').value },
+    });
+    $('site-msg').textContent = d.ok ? '已保存 ✓ 前台立即生效' : d.error || '保存失败';
+  } catch (e) { $('site-msg').textContent = '保存失败'; }
+  btn.disabled = false; btn.textContent = '保存系统信息';
+  setTimeout(() => ($('site-msg').textContent = ''), 2500);
+});
+
+// ---- 主题 ----
+function renderThemeGrid(cur) {
+  THEME_CUR = THEMES.some((t) => t.id === cur) ? cur : 'green';
+  const grid = $('theme-grid');
+  grid.innerHTML = '';
+  THEMES.forEach((t) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'theme-sw' + (t.id === THEME_CUR ? ' on' : '');
+    b.innerHTML = '<span class="dot" style="background:' + t.color + '"></span>' + esc(t.name);
+    b.addEventListener('click', () => applyTheme(t.id));
+    grid.appendChild(b);
+  });
+}
+async function applyTheme(id) {
+  renderThemeGrid(id);
+  $('theme-msg').textContent = '应用中…';
+  try {
+    const d = await API.req('/api/config', { method: 'PUT', json: { theme: id } });
+    $('theme-msg').textContent = d.ok ? '已应用 ✓ 前台立即生效' : d.error || '保存失败';
+  } catch (e) {
+    $('theme-msg').textContent = '网络错误，请重试';
+  }
+  setTimeout(() => ($('theme-msg').textContent = ''), 2500);
+}
+
+// ---- 网站图标 ----
+function updateFavPreview() {
+  const img = $('fav-img');
+  if (FAV_VERSION > 0) {
+    img.src = '/api/file/favicon?v=' + FAV_VERSION;
+    img.style.display = 'block';
+  } else {
+    img.style.display = 'none';
+  }
+  $('fav-tab-title').textContent = $('set-title').value.trim() || '作品集';
+}
+$('fav-pick').addEventListener('click', () => $('fav-file').click());
+$('fav-file').addEventListener('change', () => {
+  const f = $('fav-file').files[0];
+  if (f) $('fav-status').textContent = '已选择：' + f.name;
+});
+$('fav-upload').addEventListener('click', async () => {
+  const f = $('fav-file').files[0];
+  if (!f) { $('fav-status').textContent = '请先选择图片'; return; }
+  const btn = $('fav-upload');
+  btn.disabled = true; btn.textContent = '上传中…';
+  try {
+    const fd = new FormData();
+    fd.append('type', 'favicon');
+    fd.append('file', f);
+    const d = await postForm(fd);
+    if (d.ok && d.version) {
+      FAV_VERSION = d.version;
+      updateFavPreview();
+      $('fav-status').textContent = '上传成功 ✓ 标签页图标已更新';
+    }
+  } catch (e) {
+    $('fav-status').textContent = e.message || '上传失败';
+  }
+  btn.disabled = false; btn.textContent = '上传图标';
+  $('fav-file').value = '';
+  setTimeout(() => { $('fav-progress').style.display = 'none'; }, 1500);
+});
+
+// ---- 水印 ----
+let WM_STYLE = 'capsule'; // capsule | tile
+
+function wmPreview() {
+  const raw = $('set-wm-text').value || '内容由 {名字} 创作 · 感谢您的关注';
+  const dyn = $('set-wm-dyn').checked;
+  const dynText = ' · 112.10.*.* · 14:32';
+  // 胶囊（{xx} 加粗）
+  let html = esc(raw).replace(/\{([^{}]{1,50})\}/g, '<b>$1</b>');
+  if (dyn) html += esc(dynText);
+  $('wm-prev-capsule').innerHTML = html;
+  // 斜纹平铺（纯文本）
+  let plain = raw.replace(/\{([^{}]{1,50})\}/g, '$1');
+  if (dyn) plain += dynText;
+  const svgText = plain.replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+  const svg =
+    "<svg xmlns='http://www.w3.org/2000/svg' width='200' height='130'>" +
+    "<text x='100' y='70' font-size='12' fill='rgba(255,255,255,0.16)' font-family='-apple-system,PingFang SC,Microsoft YaHei,sans-serif' text-anchor='middle' transform='rotate(-22 100 60)'>" +
+    svgText + '</text></svg>';
+  $('wm-prev-tile').style.backgroundImage = "url(\"data:image/svg+xml," + encodeURIComponent(svg) + "\")";
+  // 样式切换
+  const capsule = WM_STYLE === 'capsule';
+  $('wm-prev-capsule').style.display = capsule ? 'flex' : 'none';
+  $('wm-prev-tile').style.display = capsule ? 'none' : 'block';
+  $('wm-preview').classList.toggle('disabled', !$('set-wm-on').checked);
+  $('wm-prev-note').textContent =
+    (capsule ? '胶囊：底部居中磨砂条，点击可跳转感谢页' : '斜纹平铺：半透明文字覆盖全屏（防截图分享）') +
+    (dyn ? ' · 动态水印已开启：实际显示会附加访客 IP 与访问时间' : '');
+}
+function setWmStyle(s) {
+  WM_STYLE = s === 'tile' ? 'tile' : 'capsule';
+  $('wm-style-capsule').classList.toggle('on', WM_STYLE === 'capsule');
+  $('wm-style-tile').classList.toggle('on', WM_STYLE === 'tile');
+  wmPreview();
+}
+$('wm-style-capsule').addEventListener('click', () => setWmStyle('capsule'));
+$('wm-style-tile').addEventListener('click', () => setWmStyle('tile'));
+$('set-wm-text').addEventListener('input', wmPreview);
+$('set-wm-on').addEventListener('change', wmPreview);
+$('set-wm-dyn').addEventListener('change', wmPreview);
+
+$('save-wm').addEventListener('click', async () => {
+  const btn = $('save-wm');
+  btn.disabled = true; btn.textContent = '保存中…';
+  try {
+    const d = await API.req('/api/config', {
+      method: 'PUT',
+      json: {
+        wm_enabled: $('set-wm-on').checked,
+        wm_dynamic: $('set-wm-dyn').checked,
+        wm_style: WM_STYLE,
+        wm_text: $('set-wm-text').value,
+        wm_name: '', // 已合并进水印文字的 {名字} 语法
+      },
+    });
+    $('wm-msg').textContent = d.ok ? '已保存 ✓ 前台立即生效' : d.error || '保存失败';
+  } catch (e) { $('wm-msg').textContent = '保存失败'; }
+  btn.disabled = false; btn.textContent = '保存水印设置';
+  setTimeout(() => ($('wm-msg').textContent = ''), 2500);
+});
+
+// ---- 联系方式 ----
+$('save-contact').addEventListener('click', async () => {
+  const btn = $('save-contact');
+  btn.disabled = true; btn.textContent = '保存中…';
+  try {
+    const d = await API.req('/api/config', {
+      method: 'PUT',
+      json: {
+        phone_enabled: $('set-phone-on').checked,
+        phone: $('set-phone').value,
+        qr_enabled: $('set-qr-on').checked,
+        wx_id: $('set-wxid').value,
+      },
+    });
+    $('contact-msg').textContent = d.ok ? '已保存 ✓ 前台立即生效' : d.error || '保存失败';
+  } catch (e) { $('contact-msg').textContent = '保存失败'; }
+  btn.disabled = false; btn.textContent = '保存联系方式';
+  setTimeout(() => ($('contact-msg').textContent = ''), 2500);
+});
+
+// ---- 微信二维码 ----
+function updateQrPreview() {
+  if (QR_VERSION > 0) {
+    $('qr-preview').src = '/api/file/qrcode?v=' + QR_VERSION;
+    $('qr-preview').style.display = 'block';
+    $('qr-empty').style.display = 'none';
+  } else {
+    $('qr-preview').style.display = 'none';
+    $('qr-empty').style.display = 'flex';
+  }
+}
+function uploadSiteImage(form, statusEl, barEl, done) {
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload');
+    xhr.setRequestHeader('Authorization', 'Bearer ' + API.token);
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) setP(barEl, (e.loaded / e.total) * 100);
+    });
+    xhr.addEventListener('load', () => {
+      let d = {};
+      try { d = JSON.parse(xhr.responseText); } catch (e) {}
+      if (xhr.status === 401) { showLogin(); resolve(false); return; }
+      statusEl.textContent = d.ok ? '上传成功 ✓' : d.error || '上传失败';
+      if (d.ok && done) done(d);
+      resolve(d.ok);
+    });
+    xhr.addEventListener('error', () => {
+      statusEl.textContent = '上传失败，请检查网络后重试';
+      resolve(false);
+    });
+    xhr.send(form);
+  });
+}
+$('qr-pick').addEventListener('click', () => $('qr-file').click());
+$('qr-file').addEventListener('change', () => {
+  const f = $('qr-file').files[0];
+  if (f) $('qr-status').textContent = '已选择：' + f.name;
+});
+$('qr-upload').addEventListener('click', async () => {
+  const f = $('qr-file').files[0];
+  if (!f) { $('qr-status').textContent = '请先选择图片'; return; }
+  const btn = $('qr-upload');
+  btn.disabled = true; btn.textContent = '上传中…';
+  const form = new FormData();
+  form.append('type', 'qrcode');
+  form.append('file', f);
+  await uploadSiteImage(form, $('qr-status'), $('qr-progress'), (d) => {
+    if (d.version) QR_VERSION = d.version;
+    updateQrPreview();
+  });
+  btn.disabled = false; btn.textContent = '上传替换';
+  $('qr-file').value = '';
+  setTimeout(() => { $('qr-progress').style.display = 'none'; }, 1500);
+});
+
+// ---- 邮件提醒 ----
+function emailFormValues() {
+  return {
+    enabled: $('set-email-on').checked,
+    to: $('set-email-to').value.trim(),
+    from: $('set-email-from').value.trim(),
+    api_key: $('set-email-key').value,
+  };
+}
+$('save-email').addEventListener('click', async () => {
+  const btn = $('save-email');
+  btn.disabled = true; btn.textContent = '保存中…';
+  $('email-msg').className = 'ok-msg';
+  try {
+    const d = await API.req('/api/config', { method: 'PUT', json: { email: emailFormValues() } });
+    if (d.ok) {
+      $('email-msg').textContent = '已保存 ✓';
+      loadSite();
+    } else {
+      $('email-msg').className = 'bad-msg';
+      $('email-msg').textContent = d.error || '保存失败';
+    }
+  } catch (e) {
+    $('email-msg').className = 'bad-msg';
+    $('email-msg').textContent = '保存失败';
+  }
+  btn.disabled = false; btn.textContent = '保存邮件设置';
+  setTimeout(() => ($('email-msg').textContent = ''), 3500);
+});
+$('test-email').addEventListener('click', async () => {
+  const btn = $('test-email');
+  btn.disabled = true; btn.textContent = '发送中…';
+  $('email-msg').className = 'ok-msg';
+  $('email-msg').textContent = '';
+  try {
+    const d = await API.req('/api/config', { method: 'PUT', json: { test_email: true, email: emailFormValues() } });
+    if (d.ok) {
+      $('email-msg').textContent = d.message || '测试邮件已发送，请查收';
+    } else {
+      $('email-msg').className = 'bad-msg';
+      $('email-msg').textContent = d.error || '发送失败';
+    }
+  } catch (e) {
+    $('email-msg').className = 'bad-msg';
+    $('email-msg').textContent = '网络错误，请重试';
+  }
+  btn.disabled = false; btn.textContent = '发送测试邮件';
+  setTimeout(() => ($('email-msg').textContent = ''), 5000);
+});
+
+// ---- 修改密码 ----
+$('save-passwd').addEventListener('click', async () => {
+  const p1 = $('np1').value, p2 = $('np2').value;
+  if (p1.length < 8) { $('passwd-msg').className = 'bad-msg'; $('passwd-msg').textContent = '新密码至少 8 位'; return; }
+  if (p1 !== p2) { $('passwd-msg').className = 'bad-msg'; $('passwd-msg').textContent = '两次输入不一致'; return; }
+  const btn = $('save-passwd');
+  btn.disabled = true; btn.textContent = '提交中…';
+  try {
+    const d = await API.req('/api/auth', { method: 'PUT', json: { new_password: p1 } });
+    $('passwd-msg').className = d.ok ? 'ok-msg' : 'bad-msg';
+    $('passwd-msg').textContent = d.ok ? '修改成功 ✓ 请牢记新密码' : d.error || '修改失败';
+    if (d.ok) { $('np1').value = ''; $('np2').value = ''; }
+  } catch (e) { $('passwd-msg').className = 'bad-msg'; $('passwd-msg').textContent = '修改失败'; }
+  btn.disabled = false; btn.textContent = '修改密码';
+});
+
+// ==================== 统计 ====================
+let LAST_STATS = null;
 
 function rankRender(el, list) {
   el.innerHTML = '';
@@ -1668,10 +2191,20 @@ function rankRender(el, list) {
     el.appendChild(d);
   });
 }
+
+function renderPfRank() {
+  if (!LAST_STATS) return;
+  const titleMap = {};
+  PF_LIST.forEach((x) => { titleMap[x.slug] = x.title; });
+  const byPf = (LAST_STATS.byPortfolio || []).map((x) => ({
+    k: titleMap[x.k] || (x.k === '(未记录)' ? '历史访问（旧版）' : '/' + x.k),
+    c: x.c,
+  }));
+  rankRender($('rank-portfolio'), byPf);
+}
+
 function fmtTime(ts) {
-  const d = new Date(ts);
-  const p = (n) => String(n).padStart(2, '0');
-  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  return fmtDateTime(ts);
 }
 function fmtVisitTime(ts) {
   const diff = Date.now() - ts;
@@ -1693,95 +2226,115 @@ function maskIp(ip) {
   if (g.length >= 4) return g.slice(0, 2).join(':') + ':*:' + g.slice(-2).join(':');
   return ip;
 }
-async function loadStats() {
+
+function renderVisitors() {
+  if (!LAST_STATS) return;
+  const titleMap = {};
+  PF_LIST.forEach((x) => { titleMap[x.slug] = x.title; });
+  const list = $('visit-list');
+  list.innerHTML = '';
+  if (!LAST_STATS.recent || !LAST_STATS.recent.length) {
+    list.innerHTML = '<div class="loading-inline">暂无访客记录</div>';
+    return;
+  }
+  LAST_STATS.recent.forEach((v) => {
+    const row = document.createElement('div');
+    row.className = 'v-row';
+    let region = v.region_cn || '未知';
+    region = region.replace(/^(.+)\1$/, '$1');
+    const pfTag = v.slug ? '<span class="v-pf" title="/' + esc(v.slug) + '">' + esc(titleMap[v.slug] || v.slug) + '</span>' : '';
+    row.innerHTML =
+      '<span class="v-who">' +
+      '<span class="v-ip">' + esc(maskIp(v.ip)) + '</span>' +
+      '<span class="v-region">（' + esc(region) + '）</span>' +
+      '<span class="v-dev">' + esc(v.device || '-') + '</span>' +
+      pfTag +
+      '</span>' +
+      '<span class="v-time" title="' + esc(fmtTime(v.ts)) + '">' + esc(fmtVisitTime(v.ts)) + '</span>';
+    list.appendChild(row);
+  });
+}
+
+async function loadStats(fresh) {
   try {
-    const d = await API.req('/api/stats');
+    const d = await API.req('/api/stats' + (fresh ? '?fresh=1' : ''));
     if (!d.ok) return;
     const s = d.stats;
+    LAST_STATS = s;
+
     $('stat-cards').innerHTML =
       '<div class="stat-card"><div class="ico g"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div><div class="v">' + (s.total.c || 0) + '</div><div class="k">总访问量</div></div></div>' +
       '<div class="stat-card"><div class="ico p"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div><div class="v">' + (s.total.u || 0) + '</div><div class="k">独立访客</div></div></div>' +
       '<div class="stat-card"><div class="ico o"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div><div class="v">' + (s.today.c || 0) + '</div><div class="k">今日访问</div></div></div>' +
-      '<div class="stat-card"><div class="ico b"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div><div class="v">' + (s.week.c || 0) + '</div><div class="k">近 7 天访问</div></div></div>';
+      '<div class="stat-card"><div class="ico b"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></div><div><div class="v">' + (s.week.c || 0) + '</div><div class="k">近 7 天访问</div></div></div>';
 
-    const chart = $('chart');
-    chart.innerHTML = '';
-    const byDay = {};
-    (s.byDay || []).forEach((x) => (byDay[x.d] = x));
-    const days = [];
-    const now = new Date();
-    for (let i = 13; i >= 0; i--) {
-      const dt = new Date(now.getTime() - i * 86400000 + 8 * 3600000);
-      days.push(dt.toISOString().slice(0, 10));
-    }
-    const maxC = Math.max(1, ...days.map((d) => (byDay[d] ? byDay[d].c : 0)));
-    days.forEach((d) => {
-      const c = byDay[d] ? byDay[d].c : 0;
-      const w = document.createElement('div');
-      w.className = 'bar-w';
-      w.title = d + '：' + c + ' 次访问';
-      w.innerHTML =
-        '<div class="bar" style="height:' + Math.max(2, (c / maxC) * 110) + 'px"></div>' +
-        '<div class="lbl">' + esc(d.slice(5)) + '</div>';
-      chart.appendChild(w);
-    });
-
-    rankRender($('rank-device'), s.byDevice);
-    rankRender($('rank-region'), s.byRegion);
-
-    LAST_STATS = s;
+    renderChart(s.byDay || []);
+    rankRender($('rank-device'), s.byDevice || []);
+    rankRender($('rank-region'), s.byRegion || []);
     renderPfRank();
-
-    const list = $('visit-list');
-    list.innerHTML = '';
-    if (!s.recent || !s.recent.length) {
-      list.innerHTML = '<div class="loading-inline">暂无访客记录</div>';
-    } else {
-      s.recent.forEach((v) => {
-        const row = document.createElement('div');
-        row.className = 'v-row';
-        let region = v.region_cn || '未知';
-        region = region.replace(/^(.+)\1$/, '$1');
-        const pfTag = v.slug ? '<span class="v-pf" title="/' + esc(v.slug) + '">' + esc(titleMap[v.slug] || v.slug) + '</span>' : '';
-        row.innerHTML =
-          '<span class="v-who">' +
-          '<span class="v-ip">' + esc(maskIp(v.ip)) + '</span>' +
-          '<span class="v-region">（' + esc(region) + '）</span>' +
-          '<span class="v-dev">' + esc(v.device || '-') + '</span>' +
-          pfTag +
-          '</span>' +
-          '<span class="v-time" title="' + esc(fmtTime(v.ts)) + '">' + esc(fmtVisitTime(v.ts)) + '</span>';
-        list.appendChild(row);
-      });
-    }
+    renderVisitors();
   } catch (e) {}
 }
 
-// ---------- 修改密码 ----------
-$('save-passwd').addEventListener('click', async () => {
-  const p1 = $('np1').value, p2 = $('np2').value;
-  if (p1.length < 8) { $('passwd-msg').style.color = '#e02020'; $('passwd-msg').textContent = '新密码至少 8 位'; return; }
-  if (p1 !== p2) { $('passwd-msg').style.color = '#e02020'; $('passwd-msg').textContent = '两次输入不一致'; return; }
-  const btn = $('save-passwd');
-  btn.disabled = true; btn.textContent = '提交中…';
-  try {
-    const d = await API.req('/api/auth', { method: 'PUT', json: { new_password: p1 } });
-    $('passwd-msg').style.color = d.ok ? '#34c759' : '#e02020';
-    $('passwd-msg').textContent = d.ok ? '修改成功 ✓ 请牢记新密码' : d.error || '修改失败';
-    if (d.ok) { $('np1').value = ''; $('np2').value = ''; }
-  } catch (e) { $('passwd-msg').textContent = '修改失败'; }
-  btn.disabled = false; btn.textContent = '修改密码';
+// 近 14 天访问量柱状图（实时数据，空缺日期补 0）
+function renderChart(byDay) {
+  const box = $('chart');
+  box.innerHTML = '';
+
+  // 数据库返回格式 d = "YYYY-MM-DD"（东八区），转成对齐 map
+  const map = {};
+  byDay.forEach((x) => { map[x.d] = x; });
+
+  const days = [];
+  const today = new Date();
+  for (let i = 13; i >= 0; i--) {
+    const dt = new Date(today.getTime() - i * 86400 * 1000);
+    const p = (n) => String(n).padStart(2, '0');
+    // 用东八区日期对齐（与后端 date(ts/1000,'unixepoch','+8 hours') 一致）
+    const t = new Date(dt.getTime() + (8 * 60 + dt.getTimezoneOffset()) * 60000);
+    const key = t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+    days.push({
+      key,
+      c: map[key] ? map[key].c : 0,
+      u: map[key] ? map[key].u : 0,
+      lbl: (t.getMonth() + 1) + '/' + t.getDate(),
+      today: i === 0,
+    });
+  }
+
+  const max = Math.max(1, ...days.map((x) => x.c));
+  days.forEach((x) => {
+    const w = document.createElement('div');
+    w.className = 'bar-w';
+    const h = x.c === 0 ? 0 : Math.max(6, (x.c / max) * 100);
+    w.innerHTML =
+      '<div class="bar" style="height:' + h + '%;opacity:' + (x.today ? '1' : '.78') + '" title="' +
+      x.key + ' · 访问 ' + x.c + ' 次 · 访客 ' + x.u + ' 人"></div>' +
+      '<div class="lbl">' + (x.today ? '<b style="color:var(--primary)">' + x.lbl + '</b>' : x.lbl) + '</div>';
+    box.appendChild(w);
+  });
+}
+
+$('stats-refresh').addEventListener('click', () => {
+  const btn = $('stats-refresh');
+  btn.disabled = true;
+  btn.textContent = '刷新中…';
+  loadStats(true).finally(() => {
+    btn.disabled = false;
+    btn.textContent = '刷新数据';
+  });
 });
 
-// ---------- 启动 ----------
-(async () => {
+// ---------- 启动：有令牌则静默续用，否则显示登录页 ----------
+(function boot() {
   if (API.token) {
-    try {
-      const d = await API.req('/api/stats');
-      if (d.ok) { showApp(); return; }
-    } catch (e) {}
+    API.req('/api/stats').then((d) => {
+      if (d.ok) showApp();
+      else showLogin();
+    }).catch(() => showLogin());
+  } else {
+    showLogin();
   }
-  showLogin();
 })();
 </script>
 </body>
