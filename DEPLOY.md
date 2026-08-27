@@ -24,8 +24,8 @@ npx wrangler login
 # 2. 执行 v3 数据库迁移（仅需一次）
 npx wrangler d1 execute portfolio-showcase-db --remote --file=schema_v3.sql
 
-# 3. 部署代码
-npx wrangler pages deploy . --project-name=portfolio-showcase
+# 3. 部署代码（⚠️ 资产目录必须是 public，传 . 会把整个项目根目录当静态资源上传，导致 /admin 404）
+npx wrangler pages deploy public --project-name=portfolio-showcase
 
 # 4. 验证
 #    打开 https://你的域名/admin 登录后：
@@ -42,7 +42,7 @@ npx wrangler pages deploy . --project-name=portfolio-showcase
 npx wrangler d1 execute portfolio-showcase-db --remote --file=schema.sql
 npx wrangler d1 execute portfolio-showcase-db --remote --file=schema_v2.sql
 npx wrangler d1 execute portfolio-showcase-db --remote --file=schema_v3.sql
-npx wrangler pages deploy . --project-name=portfolio-showcase
+npx wrangler pages deploy public --project-name=portfolio-showcase
 ```
 
 > 全新站点无旧数据时，首次打开 `/admin` 会自动创建「我的第一个作品集」。
