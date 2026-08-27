@@ -38,8 +38,14 @@ export async function onRequestGet(context) {
     });
   }
 
-  // 保留路径 → 静态资源
+  // 保留路径 → 静态资源（/thanks.html 等带后缀的旧链接剥离后缀再取资源，
+  // 生产环境 ASSETS.fetch 对 .html 直取会 404，需用 pretty URL 路径）
   if (RESERVED.has(slug)) {
+    const url = new URL(request.url);
+    if (url.pathname.endsWith('.html')) {
+      url.pathname = url.pathname.slice(0, -5);
+      return env.ASSETS.fetch(new Request(url, request));
+    }
     return env.ASSETS.fetch(request);
   }
 
